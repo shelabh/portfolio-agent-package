@@ -1,4 +1,4 @@
-name: Publish package
+name: Publish to PyPI
 
 on:
   push:
@@ -10,15 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Python & Poetry
-        uses: actions/setup-python@v4
+      - name: Publish with Poetry
+        uses: JRubics/poetry-publish@v2.1
         with:
-          python-version: '3.12'
-      - name: Install Poetry
-        run: pip install poetry
-      - name: Configure Poetry authentication
-        env:
-          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.POETRY_PYPI_TOKEN_PYPI }}
-        run: poetry config pypi-token.pypi $POETRY_PYPI_TOKEN_PYPI
-      - name: Publish to PyPI
-        run: poetry publish --build --no-interaction
+          pypi_token: ${{ secrets.POETRY_PYPI_TOKEN }}

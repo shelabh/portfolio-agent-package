@@ -1,0 +1,21 @@
+# Poetry & Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Poetry virtual environments (if in-project)
+.venv/
+venv/
+
+# Lock files (optional but commonly regenerated)
+poetry.lock
+
+# IDEs and system files
+.vscode/
+.idea/
+.DS_Store
+*.swp
+
+# Local environment variable files
+.env

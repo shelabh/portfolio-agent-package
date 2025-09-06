@@ -1,24 +1,24 @@
 [tool.poetry]
 name = "portfolio-agent"
 version = "0.1.0"
-description = "A production-ready RAG pipeline package with a LangGraph-based agent and Redis persistence."
-authors = ["Your Name <you@example.com>"]
-license = "MIT"
+description = "..."
+authors = ["You <you@example.com>"]
 readme = "README.md"
-homepage = "https://github.com/YOUR_ORG/portfolio-agent"
-repository = "https://github.com/YOUR_ORG/portfolio-agent"
-keywords = ["langgraph", "rag", "agents", "redis", "persistence"]
 
 [tool.poetry.dependencies]
 python = ">=3.12,<3.14"
-langgraph = "^0.6.0"
-redis = "^5.5.0"
+langgraph = "^0.6.6"
+redis = ">=6.0.0,<7.0.0"
 msgpack = "^1.0.5"
 
-[tool.poetry.extras]
-openai = ["openai>=1.0.0", "langchain>=0.3.0"]
-vector = ["pgvector>=0.4.0"]
+# Optional runtime dependencies — mark them optional here (no extras syntax in the names)
+openai = { version = "^1.0.0", optional = true }
+langchain = { version = "^0.3.0", optional = true }
+pgvector = { version = "^0.4.0", optional = true }
+psycopg = { version = "^3.1.0", extras = ["binary"], optional = true }  # if you need psycopg[binary]
 
-[build-system]
-requires = ["poetry-core>=1.6.0"]
-build-backend = "poetry.core.masonry.api"
+[tool.poetry.extras]
+# extras names must be plain identifiers and must reference the dependency *names* above
+llm = ["openai", "langchain"]
+vector = ["pgvector"]
+postgres = ["psycopg"]
