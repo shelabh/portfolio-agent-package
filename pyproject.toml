@@ -1,24 +1,67 @@
 [tool.poetry]
 name = "portfolio-agent"
-version = "0.1.0"
-description = "..."
-authors = ["You <you@example.com>"]
+version = "0.2.0"
+description = "A production-ready RAG pipeline with multi-agent architecture, memory management, and tool integration"
+authors = ["Shelabh Tyagi <shelabh.tyagi@example.com>"]
 readme = "README.md"
+license = "MIT"
+homepage = "https://github.com/shelabhtyagi/portfolio-agent"
+repository = "https://github.com/shelabhtyagi/portfolio-agent"
+documentation = "https://github.com/shelabhtyagi/portfolio-agent/blob/main/docs/README.md"
+keywords = ["rag", "langgraph", "ai", "agent", "portfolio", "assistant"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
 
 [tool.poetry.dependencies]
 python = ">=3.12,<3.14"
+# Core dependencies (always required)
 langgraph = "^0.6.6"
 redis = ">=6.0.0,<7.0.0"
 msgpack = "^1.0.5"
+pydantic-settings = "^2.0.0"
+requests = "^2.31.0"
+sqlalchemy = "^2.0.0"
 
-# Optional runtime dependencies — mark them optional here (no extras syntax in the names)
-openai = { version = "^1.0.0", optional = true }
-langchain = { version = "^0.3.0", optional = true }
-pgvector = { version = "^0.4.0", optional = true }
-psycopg = { version = "^3.1.0", extras = ["binary"], optional = true }  # if you need psycopg[binary]
+# LLM and Vector dependencies (required for your current use case)
+openai = "^1.0.0"
+langchain = "^0.3.0"
+pgvector = "^0.4.0"
+psycopg = { version = "^3.1.0", extras = ["binary"] }
+psycopg2-binary = "^2.9.7"  # For compatibility with libraries expecting psycopg2
 
-[tool.poetry.extras]
-# extras names must be plain identifiers and must reference the dependency *names* above
-llm = ["openai", "langchain"]
-vector = ["pgvector"]
-postgres = ["psycopg"]
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.4.2"
+pytest-asyncio = "^0.23.0"
+black = "^23.0.0"
+isort = "^5.12.0"
+flake8 = "^6.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+portfolio-agent = "portfolio_agent.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+
+[tool.black]
+line-length = 88
+target-version = ['py312']
+
+[tool.isort]
+profile = "black"
+line_length = 88

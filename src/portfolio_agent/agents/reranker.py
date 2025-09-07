@@ -1,17 +1,17 @@
-# ai-agent/agents/reranker.py
+# agents/reranker.py - FIXED
 from langgraph.types import Command
 from langgraph.graph import MessagesState
 from typing import Literal
 from ..utils import llm_chat
 
-def reranker_agent(state: MessagesState) -> Command[Literal["persona","critic","end"]]:
+def reranker_agent(state: MessagesState) -> Command[Literal["persona_agent","critic_agent","end"]]:
     """
     Rerank retrieved docs by asking a small reranker model which docs are most relevant.
     Expects state.retrieved to be a list of dicts with 'id' and 'content' fields.
     """
     retrieved = state.__dict__.get("retrieved", []) or []
     if not retrieved:
-        return Command(goto="persona", update={})
+        return Command(goto="persona_agent", update={})
 
     # build a prompt that lists doc ids + short content and asks for ranking
     doc_list = "\n\n".join([f"ID:{d['id']}\n{d['content'][:300]}" for d in retrieved])
@@ -34,4 +34,4 @@ def reranker_agent(state: MessagesState) -> Command[Literal["persona","critic","
     for d in retrieved:
         if d["id"] not in order:
             ordered.append(d)
-    return Command(goto="persona", update={"ranked": ordered})
+    return Command(goto="persona_agent", update={"ranked": ordered})

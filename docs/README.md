@@ -61,21 +61,27 @@ result = graph.run(state)
 print(result.messages[-1]["content"])
 ```
 
-### Command Line Interface
+### With Configuration
 
-```bash
-# Set required environment variables
-export OPENAI_API_KEY="your-api-key"
-export DATABASE_URL="postgresql://user:pass@localhost/db"
+```python
+import os
+from portfolio_agent import build_graph, RedisCheckpointer
 
-# Run a single query
-portfolio-agent --query "What are your skills?"
+# Set environment variables
+os.environ["OPENAI_API_KEY"] = "your-api-key"
+os.environ["DATABASE_URL"] = "postgresql://user:pass@localhost/db"
+os.environ["REDIS_URL"] = "redis://localhost:6379/0"
 
-# Run in interactive mode
-portfolio-agent --interactive
+# Build with persistence
+checkpointer = RedisCheckpointer()
+graph = build_graph(checkpointer=checkpointer)
 
-# With user context for memory
-portfolio-agent --query "What did we discuss before?" --user-id user123
+# Run with user context
+state = MessagesState()
+state.messages = [{"role": "user", "content": "Tell me about your experience"}]
+state.user_id = "user123"  # For memory management
+
+result = graph.run(state)
 ```
 
 ## Configuration
@@ -214,6 +220,15 @@ CREATE TABLE documents (
 CREATE INDEX ON documents USING ivfflat (embedding vector_cosine_ops);
 ```
 
+## Error Handling
+
+The system includes comprehensive error handling:
+
+- **Retry Logic**: Automatic retries with exponential backoff for API calls
+- **Graceful Degradation**: Fallback responses when services are unavailable
+- **Validation**: Built-in critic agent prevents hallucinated responses
+- **Logging**: Comprehensive logging for debugging and monitoring
+
 ## Testing
 
 Run the test suite:
@@ -227,10 +242,6 @@ The test suite includes:
 - Integration tests for the complete pipeline
 - Tool functionality tests
 - Error handling tests
-
-## Documentation
-
-For detailed documentation, see [docs/README.md](docs/README.md).
 
 ## Contributing
 

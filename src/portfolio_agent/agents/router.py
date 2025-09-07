@@ -1,16 +1,16 @@
-# ai-agent/agents/router.py
+# agents/router.py - FIXED
 from typing import Literal
 from langgraph.types import Command
 from langgraph.graph import MessagesState
 from ..config import settings
 from ..utils import llm_chat
 
-def router_agent(state: MessagesState) -> Command[Literal["retriever","tool","direct","end"]]:
+def router_agent(state: MessagesState) -> Command[Literal["retriever_agent","calendly_agent","persona_agent","end"]]:
     """
     Inspect last user message and decide route:
-     - 'tool' for calendly/email/notes
-     - 'retriever' for RAG
-     - 'direct' for direct LLM answer (no retrieval)
+     - 'calendly_agent' for tool usage  
+     - 'retriever_agent' for RAG
+     - 'persona_agent' for direct LLM answer (no retrieval)
     """
     messages = state.messages if hasattr(state, "messages") else []
     last_user = None
@@ -29,10 +29,10 @@ def router_agent(state: MessagesState) -> Command[Literal["retriever","tool","di
     resp = llm_chat(prompt, max_tokens=32)
     choice = resp.strip().lower()
     if "tool" in choice:
-        goto = "tool"
+        goto = "calendly_agent"  # Updated to match graph node name
     elif "retriever" in choice:
-        goto = "retriever"
+        goto = "retriever_agent"  # Updated to match graph node name
     else:
-        goto = "direct"
+        goto = "persona_agent"  # Updated to match graph node name
 
-    return Command(goto=goto, update={"last_intent": goto})
+    return Command(goto=goto, update={"last_intent": choice})

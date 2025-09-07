@@ -1,4 +1,4 @@
-# ai-agent/agents/critic.py
+# agents/critic.py - FIXED
 from langgraph.types import Command
 from langgraph.graph import MessagesState
 from typing import Literal
@@ -24,7 +24,7 @@ def critic_agent(state: MessagesState) -> Command[Literal["end","notes_agent"]]:
         # be conservative
         verdict = {"valid": False, "issues": ["Could not parse critic response."]}
     if not verdict.get("valid"):
-        fallback = "I can’t fully verify that information right now. Would you like me to show the sources or request a human review?"
+        fallback = "I can't fully verify that information right now. Would you like me to show the sources or request a human review?"
         return Command(goto="end", update={"final_answer": fallback})
     # otherwise persist note or optionally call notes agent to log the interaction
     return Command(goto="notes_agent", update={"final_answer": candidate})

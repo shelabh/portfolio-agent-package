@@ -1,10 +1,11 @@
-# ai-agent/agents/retriever.py
+# agents/retriever.py - FIXED  
 from langgraph.types import Command
 from langgraph.graph import MessagesState
-from ..utils import llm_chat, nearest_neighbors
+from ..utils import llm_chat, nearest_neighbors, client
+from ..config import settings
 from typing import Literal
 
-def retriever_agent(state: MessagesState) -> Command[Literal["reranker","persona","end"]]:
+def retriever_agent(state: MessagesState) -> Command[Literal["reranker_agent","persona_agent","end"]]:
     """
     - Create a retrieval query from the last user message
     - Call embeddings (via external service) to get query vector
@@ -24,14 +25,10 @@ def retriever_agent(state: MessagesState) -> Command[Literal["reranker","persona
               {"role":"user","content": last_user}]
     q = llm_chat(prompt, max_tokens=64)
 
-    # NOTE: production: call embedding model (bge-m3 or embedding provider)
-    # For demo we call the embeddings model via OpenAI API (or swap)
-    from ..config import settings
-    import openai
-    openai.api_key = settings.OPENAI_API_KEY
+    # Use the client from utils for consistency
     emb_model = settings.EMBEDDING_MODEL
-    emb_res = openai.Embedding.create(model=emb_model, input=q)
-    q_vec = emb_res["data"][0]["embedding"]
+    emb_res = client.embeddings.create(model=emb_model, input=q)
+    q_vec = emb_res.data[0].embedding
 
     hits = nearest_neighbors(q_vec, top_k=6)
-    return Command(goto="reranker", update={"retrieved": hits})
+    return Command(goto="reranker_agent", update={"retrieved": hits})

@@ -1,4 +1,4 @@
-# ai-agent/agents/tools/email_agent.py
+# agents/tools/email_agent.py
 from langgraph.types import Command
 from langgraph.graph import MessagesState
 from typing import Literal
