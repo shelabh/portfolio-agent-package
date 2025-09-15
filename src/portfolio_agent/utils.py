@@ -62,13 +62,17 @@ def llm_chat(messages: List[Dict[str, str]], **kwargs) -> str:
     return call_openai_chat(messages, **kwargs)
 
 # Simple pgvector helper (SQLAlchemy)
-from sqlalchemy import create_engine, text
-from sqlalchemy.engine import Engine
-
-# Only create engine if DATABASE_URL is provided
-engine: Engine | None = None
-if settings.DATABASE_URL:
-    engine = create_engine(settings.DATABASE_URL, future=True)
+# Only create engine if DATABASE_URL is provided and dependencies are available
+engine = None
+try:
+    from sqlalchemy import create_engine, text
+    from sqlalchemy.engine import Engine
+    
+    if settings.DATABASE_URL:
+        engine = create_engine(settings.DATABASE_URL, future=True)
+except ImportError:
+    # SQLAlchemy or database drivers not available
+    engine = None
 
 def upsert_vector(id: str, metadata: Dict[str, Any], vector: List[float], retries=3):
     """

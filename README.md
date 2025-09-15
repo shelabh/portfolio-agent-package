@@ -1,19 +1,40 @@
 # Portfolio Agent
 
-A production-ready RAG (Retrieval-Augmented Generation) pipeline built with LangGraph and Redis persistence. This package provides a sophisticated multi-agent system for building professional AI assistants with memory, tool integration, and quality assurance.
+A production-ready RAG (Retrieval-Augmented Generation) pipeline with multi-agent architecture, memory management, and tool integration. Built with security-first principles and enterprise-grade features.
 
-## Features
+## 🚀 Features
 
+### Core Capabilities
 - **Multi-Agent Architecture**: Sophisticated pipeline with specialized agents for routing, retrieval, reranking, response generation, and quality control
-- **Memory Management**: Enhanced user context and conversation history tracking
+- **Memory Management**: Enhanced user context and conversation history tracking with Redis persistence
 - **Tool Integration**: Built-in support for Calendly scheduling, email drafting, and note-taking
 - **Quality Assurance**: Built-in critic agent to prevent hallucinations and ensure factual accuracy
-- **Redis Persistence**: Production-ready state management with Redis checkpointer
-- **Flexible LLM Support**: Compatible with OpenAI and vLLM providers
-- **Vector Search**: pgvector integration for efficient document retrieval
-- **Error Handling**: Robust retry mechanisms and graceful error recovery
 
-## Installation
+### Security & Privacy
+- **Safe-by-Default**: LOCAL_ONLY mode, automatic PII redaction, consent management
+- **Data Protection**: Encryption at rest and in transit, access controls, audit logging
+- **Compliance Ready**: GDPR, CCPA, SOC 2 compliance features
+- **Secret Management**: Secure handling of API keys and sensitive data
+
+### Vector Search & Embeddings
+- **Multiple Vector Stores**: FAISS (local), Pinecone (cloud), OpenSearch (enterprise), pgvector
+- **Embedding Providers**: OpenAI, Hugging Face, local sentence-transformers
+- **Advanced RAG**: Multi-stage retrieval, reranking, citation tracking
+- **Fine-tuning**: PEFT/LoRA examples for custom model training
+
+### LLM Backends
+- **OpenAI**: GPT models via OpenAI API
+- **Hugging Face**: Local and hosted HF models
+- **AWS Bedrock**: Enterprise-grade AI services
+- **vLLM**: High-performance local serving
+
+### Document Processing
+- **Multi-format Support**: PDF, TXT, MD, HTML, JSON, DOCX
+- **Smart Ingestion**: GitHub repos, websites, resumes, generic files
+- **PII Redaction**: Automatic detection and redaction of sensitive information
+- **Chunking**: Configurable text chunking with overlap
+
+## 📦 Installation
 
 ### Basic Installation
 
@@ -24,34 +45,32 @@ pip install portfolio-agent
 ### With Optional Dependencies
 
 ```bash
-# For LLM functionality
-pip install portfolio-agent[llm]
+# For all features
+pip install portfolio-agent[all]
 
-# For vector database support
-pip install portfolio-agent[vector]
-
-# For PostgreSQL support
-pip install portfolio-agent[postgres]
-
-# All optional dependencies
-pip install portfolio-agent[llm,vector,postgres]
+# Or install specific extras
+pip install portfolio-agent[llm,vector,embeddings,finetune,documents,postgres]
 ```
 
-## Quick Start
+### Development Installation
 
-### Basic Usage
+```bash
+git clone https://github.com/shelabhtyagi/portfolio-agent.git
+cd portfolio-agent
+pip install -e ".[all]"
+```
+
+## 🚀 Quick Start
+
+### 1. Basic Usage
 
 ```python
 from portfolio_agent import build_graph, RedisCheckpointer
 
-# Build the graph
+# Build the agent graph
 graph = build_graph()
 
-# Or with Redis persistence
-checkpointer = RedisCheckpointer(redis_url="redis://localhost:6379/0")
-graph = build_graph(checkpointer=checkpointer)
-
-# Run the agent
+# Run a query
 from langgraph.graph.message import MessagesState
 
 state = MessagesState()
@@ -59,6 +78,39 @@ state.messages = [{"role": "user", "content": "What are your skills?"}]
 
 result = graph.run(state)
 print(result.messages[-1]["content"])
+```
+
+### 2. With Configuration
+
+```python
+import os
+from portfolio_agent import build_graph, RedisCheckpointer
+
+# Set environment variables
+os.environ["OPENAI_API_KEY"] = "your-api-key"
+os.environ["LOCAL_ONLY"] = "false"  # Enable external APIs
+os.environ["REDACT_PII"] = "true"   # Automatic PII redaction
+
+# Build with persistence
+checkpointer = RedisCheckpointer()
+graph = build_graph(checkpointer=checkpointer)
+
+# Run with user context
+state = MessagesState()
+state.messages = [{"role": "user", "content": "Tell me about your experience"}]
+state.user_id = "user123"  # For memory management
+
+result = graph.run(state)
+```
+
+### 3. FastAPI Server
+
+```python
+from portfolio_agent import create_demo_app
+import uvicorn
+
+app = create_demo_app()
+uvicorn.run(app, host="0.0.0.0", port=8000)
 ```
 
 ### Command Line Interface
@@ -122,7 +174,39 @@ SMTP_PASS=password
 REDIS_URL=redis://localhost:6379/0
 ```
 
-## Architecture
+## 🏗️ Architecture
+
+### Modular Design
+
+The Portfolio Agent follows a modular, extensible architecture:
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Ingestors     │    │   Embeddings    │    │  Vector Stores  │
+│ • GitHub        │───▶│ • OpenAI        │───▶│ • FAISS         │
+│ • Resume PDF    │    │ • Hugging Face  │    │ • Pinecone      │
+│ • Website HTML  │    │ • Local Models  │    │ • OpenSearch    │
+│ • Generic Files │    │                 │    │ • pgvector      │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         ▼                       ▼                       ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    RAG Pipeline                                │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐            │
+│  │  Retriever  │─▶│  Reranker   │─▶│  Response   │            │
+│  │             │  │             │  │  Pipeline   │            │
+│  └─────────────┘  └─────────────┘  └─────────────┘            │
+└─────────────────────────────────────────────────────────────────┘
+         │                       │                       │
+         ▼                       ▼                       ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   LLM Backends  │    │    Agents       │    │   Persistence   │
+│ • OpenAI        │    │ • Persona       │    │ • Redis         │
+│ • Hugging Face  │    │ • Recruiter     │    │ • SQLite        │
+│ • AWS Bedrock   │    │ • Assistant     │    │ • Memory        │
+│ • vLLM          │    │ • Tools         │    │                 │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
 
 ### Agent Pipeline
 
@@ -228,9 +312,53 @@ The test suite includes:
 - Tool functionality tests
 - Error handling tests
 
-## Documentation
+## 📚 Examples & Demos
 
-For detailed documentation, see [docs/README.md](docs/README.md).
+### Portfolio Demo
+
+```bash
+cd EXAMPLES/portfolio_demo
+./start_demo.sh
+```
+
+Features:
+- Personal portfolio assistant
+- Resume and GitHub integration
+- Professional Q&A with citations
+- Interactive web interface
+
+### Recruiter Demo
+
+```bash
+cd EXAMPLES/recruiter_demo
+# Coming soon in Week 4
+```
+
+Features:
+- Candidate evaluation
+- Skills matching
+- Interview scheduling
+- Recruitment workflows
+
+### Internal KB Demo
+
+```bash
+cd EXAMPLES/internal_kb_demo
+# Coming soon in Week 4
+```
+
+Features:
+- Document ingestion
+- Knowledge search
+- Team collaboration
+- Access controls
+
+## 📖 Documentation
+
+- [Quick Start Guide](docs/QUICKSTART.md) - Get up and running quickly
+- [Architecture Guide](docs/ARCHITECTURE.md) - Detailed system architecture
+- [Security Guide](docs/SECURITY.md) - Security best practices
+- [Privacy Policy](docs/PRIVACY.md) - Data protection and privacy
 
 ## Contributing
 

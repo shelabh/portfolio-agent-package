@@ -1,23 +1,25 @@
 [tool.poetry]
 name = "portfolio-agent"
-version = "0.2.0"
+version = "0.3.0"
 description = "A production-ready RAG pipeline with multi-agent architecture, memory management, and tool integration"
 authors = ["Shelabh Tyagi <shelabh.tyagi@example.com>"]
 readme = "README.md"
-license = "MIT"
+license = "Apache-2.0"
 homepage = "https://github.com/shelabhtyagi/portfolio-agent"
 repository = "https://github.com/shelabhtyagi/portfolio-agent"
 documentation = "https://github.com/shelabhtyagi/portfolio-agent/blob/main/docs/README.md"
-keywords = ["rag", "langgraph", "ai", "agent", "portfolio", "assistant"]
+keywords = ["rag", "langgraph", "ai", "agent", "portfolio", "assistant", "vector-search", "embeddings", "fine-tuning"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Text Processing :: Linguistic",
+    "Topic :: Database :: Database Engines/Servers",
 ]
 
 [tool.poetry.dependencies]
@@ -29,6 +31,9 @@ msgpack = "^1.0.5"
 pydantic-settings = "^2.0.0"
 requests = "^2.31.0"
 sqlalchemy = "^2.0.0"
+pyyaml = "^6.0.0"
+fastapi = "^0.104.0"
+uvicorn = "^0.24.0"
 
 # LLM and Vector dependencies (required for your current use case)
 openai = "^1.0.0"
@@ -36,6 +41,63 @@ langchain = "^0.3.0"
 pgvector = "^0.4.0"
 psycopg = { version = "^3.1.0", extras = ["binary"] }
 psycopg2-binary = "^2.9.7"  # For compatibility with libraries expecting psycopg2
+
+[tool.poetry.extras]
+# LLM backends
+llm = [
+    "openai>=1.0.0",
+    "transformers>=4.30.0",
+    "torch>=2.0.0",
+    "accelerate>=0.20.0",
+    "boto3>=1.26.0",  # For AWS Bedrock
+]
+
+# Vector stores
+vector = [
+    "faiss-cpu>=1.7.4",
+    "pinecone-client>=2.2.0",
+    "opensearch-py>=2.0.0",
+    "pgvector>=0.4.0",
+]
+
+# Embeddings
+embeddings = [
+    "sentence-transformers>=2.2.0",
+    "transformers>=4.30.0",
+    "torch>=2.0.0",
+]
+
+# Fine-tuning
+finetune = [
+    "peft>=0.5.0",
+    "transformers>=4.30.0",
+    "torch>=2.0.0",
+    "datasets>=2.14.0",
+    "accelerate>=0.20.0",
+    "bitsandbytes>=0.41.0",
+]
+
+# Document processing
+documents = [
+    "pypdf>=3.0.0",
+    "pymupdf>=1.23.0",
+    "beautifulsoup4>=4.12.0",
+    "lxml>=4.9.0",
+    "python-docx>=0.8.11",
+    "markdown>=3.4.0",
+]
+
+# PostgreSQL support
+postgres = [
+    "pgvector>=0.4.0",
+    "psycopg[binary]>=3.1.0",
+    "psycopg2-binary>=2.9.7",
+]
+
+# All optional dependencies
+all = [
+    "portfolio-agent[llm,vector,embeddings,finetune,documents,postgres]"
+]
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.4.2"
