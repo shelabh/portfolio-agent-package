@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     
     # ===== VECTOR STORES =====
     VECTOR_STORE: str = Field(default="faiss", description="Vector store: faiss, pinecone, opensearch, pgvector")
+    FAISS_INDEX_PATH: str = Field(default="./faiss_index", description="Path to FAISS index files")
+    FAISS_INDEX_TYPE: str = Field(default="flat", description="FAISS index type: flat, ivf, hnsw")
+    FAISS_METRIC: str = Field(default="cosine", description="FAISS distance metric: cosine, l2, ip")
     PINECONE_API_KEY: Optional[str] = Field(default=None, description="Pinecone API key")
     PINECONE_ENVIRONMENT: Optional[str] = Field(default=None, description="Pinecone environment")
     OPENSEARCH_URL: Optional[str] = Field(default=None, description="OpenSearch cluster URL")

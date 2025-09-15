@@ -1,0 +1,22 @@
+Technical Skills:
+
+Programming Languages:
+- Python (Expert): Django, Flask, FastAPI, pandas, numpy, scikit-learn
+- JavaScript (Expert): React, Node.js, Express, TypeScript
+- Java (Intermediate): Spring Boot, Maven
+- Go (Intermediate): Gin, Gorilla
+
+Databases:
+- SQL: PostgreSQL, MySQL, SQLite
+- NoSQL: MongoDB, Redis, Elasticsearch
+
+Cloud & DevOps:
+- AWS: EC2, S3, Lambda, RDS, CloudFormation
+- Docker, Kubernetes, Jenkins, GitHub Actions
+- Linux, Bash scripting
+
+Soft Skills:
+- Team leadership and mentoring
+- Agile/Scrum methodologies
+- Problem-solving and critical thinking
+- Communication and collaboration

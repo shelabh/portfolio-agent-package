@@ -1,16 +1,16 @@
 """
-Embeddings module for portfolio-agent.
+Embeddings Module
 
-This module provides embedding provider adapters:
-- OpenAI embeddings
-- Hugging Face sentence-transformers
-- Local embedding models
+This module provides embedding adapters for various providers including
+OpenAI and Hugging Face models.
 """
 
-from .openai_embedder import OpenAIEmbedder
-from .hf_embedder import HuggingFaceEmbedder
+from .openai_embedder import OpenAIEmbedder, create_openai_embedder
+from .hf_embedder import HuggingFaceEmbedder, create_hf_embedder
 
 __all__ = [
-    "OpenAIEmbedder",
-    "HuggingFaceEmbedder"
+    'OpenAIEmbedder',
+    'create_openai_embedder',
+    'HuggingFaceEmbedder', 
+    'create_hf_embedder'
 ]

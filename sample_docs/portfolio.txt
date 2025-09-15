@@ -1,0 +1,10 @@
+I am a software engineer with 5+ years of experience in full-stack development.
+My expertise includes Python, JavaScript, React, Node.js, and cloud technologies.
+
+Key Projects:
+- E-commerce platform with microservices architecture
+- Machine learning pipeline for data analysis
+- Real-time chat application with WebSocket
+- Mobile app with React Native
+
+Technologies: Python, JavaScript, React, Node.js, AWS, Docker, Kubernetes, PostgreSQL, MongoDB
