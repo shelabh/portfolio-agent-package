@@ -1,18 +1,73 @@
-name: CI
+name: CI/CD Pipeline
 
 on:
   push:
     branches: [ main, develop ]
   pull_request:
     branches: [ main, develop ]
+  schedule:
+    # Run security scans daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+env:
+  PYTHON_VERSION: '3.12'
+  POETRY_VERSION: '1.7.1'
 
 jobs:
+  # Code Quality and Linting
+  lint:
+    name: Code Quality & Linting
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: ${{ env.POETRY_VERSION }}
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+    
+    - name: Load cached venv
+      id: cached-poetry-dependencies
+      uses: actions/cache@v3
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/poetry.lock') }}
+    
+    - name: Install dependencies
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+      run: poetry install --no-interaction --no-root
+    
+    - name: Install project
+      run: poetry install --no-interaction
+    
+    - name: Run Black (Code Formatting)
+      run: poetry run black --check --diff .
+    
+    - name: Run isort (Import Sorting)
+      run: poetry run isort --check-only --diff .
+    
+    - name: Run Flake8 (Linting)
+      run: poetry run flake8 --max-line-length=88 --extend-ignore=E203,W503 .
+    
+    - name: Run MyPy (Type Checking)
+      run: poetry run mypy src/portfolio_agent --ignore-missing-imports || true
+
+  # Unit and Integration Tests
   test:
+    name: Unit & Integration Tests
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: [3.12, 3.13]
-
+        test-group: [unit, integration, security]
+    
     steps:
     - uses: actions/checkout@v4
     
@@ -24,7 +79,7 @@ jobs:
     - name: Install Poetry
       uses: snok/install-poetry@v1
       with:
-        version: latest
+        version: ${{ env.POETRY_VERSION }}
         virtualenvs-create: true
         virtualenvs-in-project: true
     
@@ -42,34 +97,94 @@ jobs:
     - name: Install project
       run: poetry install --no-interaction
     
-    - name: Run linting
+    - name: Run Unit Tests
+      if: matrix.test-group == 'unit'
       run: |
-        poetry run black --check .
-        poetry run isort --check-only .
-        poetry run flake8 .
+        poetry run pytest tests/test_agents.py tests/test_utils.py tests/test_tools.py -v \
+          --cov=src/portfolio_agent --cov-report=xml --cov-report=html \
+          --junitxml=test-results-unit.xml
     
-    - name: Run tests
-      run: poetry run pytest tests/ -v --cov=src/portfolio_agent --cov-report=xml
+    - name: Run Integration Tests
+      if: matrix.test-group == 'integration'
+      run: |
+        poetry run pytest tests/test_graph_integration.py tests/test_rag_pipeline.py -v \
+          --cov=src/portfolio_agent --cov-report=xml --cov-report=html \
+          --junitxml=test-results-integration.xml
+    
+    - name: Run Security Tests
+      if: matrix.test-group == 'security'
+      run: |
+        poetry run pytest tests/test_security.py -v \
+          --cov=src/portfolio_agent --cov-report=xml --cov-report=html \
+          --junitxml=test-results-security.xml
     
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
       with:
         file: ./coverage.xml
-        flags: unittests
-        name: codecov-umbrella
+        flags: ${{ matrix.test-group }}
+        name: codecov-${{ matrix.test-group }}-py${{ matrix.python-version }}
         fail_ci_if_error: false
+    
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: test-results-${{ matrix.test-group }}-py${{ matrix.python-version }}
+        path: test-results-*.xml
 
+  # Security Scanning
   security-scan:
+    name: Security Scanning
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0  # Full history for better secret detection
     
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: ${{ env.POETRY_VERSION }}
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+    
+    - name: Install dependencies
+      run: poetry install --no-interaction
+    
+    - name: Run Bandit (Security Linting)
+      run: |
+        poetry run bandit -r src/ -f json -o bandit-report.json || true
+        poetry run bandit -r src/ -ll
+    
+    - name: Run Safety (Dependency Vulnerability Check)
+      run: |
+        poetry run safety check --json --output safety-report.json || true
+        poetry run safety check
+    
+    - name: Run Semgrep (SAST)
+      uses: returntocorp/semgrep-action@v1
+      with:
+        config: >-
+          p/security-audit
+          p/secrets
+          p/owasp-top-ten
+        generateSarif: "1"
+    
+    - name: Upload Semgrep SARIF
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: semgrep.sarif
+    
     - name: Secret Scan
       run: |
-        # Check for common secret patterns
-        echo "Scanning for potential secrets..."
+        echo "🔍 Scanning for potential secrets..."
         
         # Check for API keys, tokens, and other secrets
         if grep -r -i -E "(api[_-]?key|secret[_-]?key|token|password|passwd|pwd)" --include="*.py" --include="*.yaml" --include="*.yml" --include="*.json" --include="*.md" . | grep -v -E "(example|test|demo|placeholder|redacted|xxx|your-)" | grep -v -E "(#|//|/\*|\*)" | grep -v -E "(AKIA|sk-|pk_)"; then
@@ -99,22 +214,68 @@ jobs:
         fi
         
         echo "✅ Security scan passed!"
+    
+    - name: Upload security reports
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: security-reports
+        path: |
+          bandit-report.json
+          safety-report.json
 
-  build:
+  # Performance Testing
+  performance-test:
+    name: Performance Testing
     runs-on: ubuntu-latest
-    needs: [test, security-scan]
+    needs: [lint]
     steps:
     - uses: actions/checkout@v4
     
-    - name: Set up Python
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
       uses: actions/setup-python@v4
       with:
-        python-version: '3.12'
+        python-version: ${{ env.PYTHON_VERSION }}
     
     - name: Install Poetry
       uses: snok/install-poetry@v1
       with:
-        version: latest
+        version: ${{ env.POETRY_VERSION }}
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+    
+    - name: Install dependencies
+      run: poetry install --no-interaction
+    
+    - name: Run Performance Tests
+      run: |
+        poetry run pytest tests/test_performance.py -v --benchmark-only --benchmark-save=performance-results || true
+        poetry run pytest tests/test_performance.py -v --benchmark-save=performance-results || true
+    
+    - name: Upload performance results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: performance-results
+        path: .benchmarks/
+
+  # Build and Package
+  build:
+    name: Build & Package
+    runs-on: ubuntu-latest
+    needs: [test, security-scan, performance-test]
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: ${{ env.POETRY_VERSION }}
         virtualenvs-create: true
         virtualenvs-in-project: true
     
@@ -127,8 +288,21 @@ jobs:
     - name: Check package
       run: poetry run twine check dist/*
     
+    - name: Test package installation
+      run: |
+        pip install dist/*.whl
+        python -c "import portfolio_agent; print('Package imports successfully')"
+    
     - name: Upload build artifacts
       uses: actions/upload-artifact@v3
       with:
         name: dist
         path: dist/
+    
+    - name: Generate build report
+      run: |
+        echo "## Build Report" >> $GITHUB_STEP_SUMMARY
+        echo "- **Python Version**: ${{ env.PYTHON_VERSION }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Poetry Version**: ${{ env.POETRY_VERSION }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Build Status**: ✅ Success" >> $GITHUB_STEP_SUMMARY
+        echo "- **Package Files**: $(ls -la dist/)" >> $GITHUB_STEP_SUMMARY

@@ -4,7 +4,7 @@ from langgraph.graph import StateGraph, MessagesState, START, END
 from typing import Literal
 
 # Import the new RAG pipeline instead
-from portfolio_agent.rag_pipeline import RAGPipeline
+from .rag_pipeline import RAGPipeline
 
 def build_graph(checkpointer=None):
     """

@@ -53,6 +53,12 @@ class Settings(BaseSettings):
     DATABASE_URL: Optional[str] = Field(default=None, description="Database connection URL")
     VECTOR_TABLE: str = Field(default="documents", description="Vector storage table name")
     
+    # ===== API & SERVER =====
+    API_HOST: str = Field(default="0.0.0.0", description="API server host")
+    API_PORT: int = Field(default=8000, description="API server port")
+    ALLOWED_ORIGINS: List[str] = Field(default=["*"], description="Allowed CORS origins")
+    ALLOWED_HOSTS: List[str] = Field(default=["*"], description="Allowed hosts")
+    
     # ===== INGESTION =====
     CHUNK_SIZE: int = Field(default=1000, description="Text chunk size for processing")
     CHUNK_OVERLAP: int = Field(default=200, description="Overlap between chunks")

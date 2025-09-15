@@ -13,6 +13,7 @@ from langgraph.graph.message import MessagesState
 
 from . import build_graph, RedisCheckpointer
 from .config import settings
+from .api.server import create_app
 
 
 def main():
@@ -65,6 +66,32 @@ Examples:
         help="Enable verbose logging"
     )
     
+    parser.add_argument(
+        "--serve", "-s",
+        action="store_true",
+        help="Start the FastAPI server"
+    )
+    
+    parser.add_argument(
+        "--host",
+        type=str,
+        default="127.0.0.1",
+        help="Host to bind the server to (default: 127.0.0.1)"
+    )
+    
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=8000,
+        help="Port to bind the server to (default: 8000)"
+    )
+    
+    parser.add_argument(
+        "--reload",
+        action="store_true",
+        help="Enable auto-reload for development"
+    )
+    
     args = parser.parse_args()
     
     if args.verbose:
@@ -93,7 +120,9 @@ Examples:
         print(f"Error building graph: {e}")
         sys.exit(1)
     
-    if args.interactive:
+    if args.serve:
+        run_server(args.host, args.port, args.reload)
+    elif args.interactive:
         run_interactive(graph, args.user_id)
     elif args.query:
         run_single_query(graph, args.query, args.user_id)
@@ -169,6 +198,36 @@ def run_interactive(graph, user_id: Optional[str] = None):
             break
         except Exception as e:
             print(f"Error: {e}")
+
+
+def run_server(host: str, port: int, reload: bool):
+    """Run the FastAPI server."""
+    try:
+        import uvicorn
+        
+        app = create_app()
+        
+        print(f"Starting Portfolio Agent API server...")
+        print(f"Server will be available at: http://{host}:{port}")
+        print(f"API documentation: http://{host}:{port}/docs")
+        print(f"Health check: http://{host}:{port}/api/v1/health")
+        print("Press Ctrl+C to stop the server")
+        
+        uvicorn.run(
+            app,
+            host=host,
+            port=port,
+            reload=reload,
+            log_level="info" if settings.LOCAL_ONLY else "warning"
+        )
+        
+    except ImportError:
+        print("Error: uvicorn is required to run the server.")
+        print("Install it with: pip install uvicorn")
+        sys.exit(1)
+    except Exception as e:
+        print(f"Error starting server: {e}")
+        sys.exit(1)
 
 
 def print_help():
