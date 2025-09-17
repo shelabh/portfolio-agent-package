@@ -10,7 +10,7 @@ import yaml
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 from pydantic_settings import BaseSettings
-from pydantic import Field, validator
+from pydantic import Field, field_validator, ConfigDict
 
 
 class Settings(BaseSettings):
@@ -111,20 +111,23 @@ class Settings(BaseSettings):
     ENABLE_AUDIT_LOG: bool = Field(default=True, description="Enable audit logging")
     METRICS_ENABLED: bool = Field(default=False, description="Enable metrics collection")
     
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = True
-        extra = "ignore"
+    model_config = ConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+        extra="ignore"
+    )
     
-    @validator('LOCAL_ONLY', pre=True)
+    @field_validator('LOCAL_ONLY', mode='before')
+    @classmethod
     def validate_local_only(cls, v):
         """Ensure LOCAL_ONLY is properly set based on environment."""
         if isinstance(v, str):
             return v.lower() in ('true', '1', 'yes', 'on')
         return bool(v)
     
-    @validator('REDACT_PII', pre=True)
+    @field_validator('REDACT_PII', mode='before')
+    @classmethod
     def validate_redact_pii(cls, v):
         """Ensure REDACT_PII is properly set."""
         if isinstance(v, str):

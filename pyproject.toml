@@ -38,6 +38,8 @@ uvicorn = "^0.24.0"
 # LLM and Vector dependencies (required for your current use case)
 openai = "^1.0.0"
 langchain = "^0.3.0"
+langchain-openai = "^0.1.0"
+langchain-community = "^0.3.0"
 pgvector = "^0.4.0"
 psycopg = { version = "^3.1.0", extras = ["binary"] }
 psycopg2-binary = "^2.9.7"  # For compatibility with libraries expecting psycopg2
@@ -82,12 +84,27 @@ pytest = "^7.4.0"
 pytest-asyncio = "^0.21.0"
 pytest-benchmark = "^4.0.0"
 pytest-xdist = "^3.3.0"
+pytest-cov = "^4.1.0"
+pytest-timeout = "^2.1.0"
 black = "^23.0.0"
 isort = "^5.12.0"
 flake8 = "^6.0.0"
 mypy = "^1.5.0"
 bandit = "^1.7.0"
 safety = "^2.3.0"
+
+[tool.pytest.ini_options]
+markers = [
+    "benchmark: marks tests as benchmark tests",
+    "slow: marks tests as slow running",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+    "security: marks tests as security tests"
+]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
 
 [build-system]
 requires = ["poetry-core"]

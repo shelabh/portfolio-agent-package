@@ -8,10 +8,10 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - LOCAL_ONLY=true
+      - LOCAL_ONLY=false
       - REDIS_URL=redis://redis:6379
-      - DATABASE_URL=postgresql://portfolio:password@postgres:5432/portfolio_db
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://portfolio:password@postgres:5432/portfolio_db}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
