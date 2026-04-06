@@ -1,9 +1,6 @@
 name: Deploy Portfolio Agent
 
 on:
-  push:
-    branches: [ main ]
-    tags: [ 'v*.*.*' ]
   workflow_dispatch:
     inputs:
       environment:
@@ -111,6 +108,7 @@ jobs:
       with:
         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         tags: |
+          type=ref,event=tag
           type=semver,pattern={{version}}
           type=semver,pattern={{major}}.{{minor}}
           type=raw,value=latest
@@ -119,7 +117,7 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: .
-        platforms: linux/amd64,linux/arm64
+        platforms: linux/amd64
         push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
@@ -158,4 +156,4 @@ jobs:
         tag_name: ${{ github.ref_name }}
         release_name: Release ${{ github.ref_name }}
         draft: false
-        prerelease: false
+        prerelease: true

@@ -5,6 +5,7 @@ FROM python:3.12-slim as builder
 ARG BUILD_DATE
 ARG VCS_REF
 ARG VERSION
+ARG POETRY_VERSION=2.1.4
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
@@ -21,7 +22,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Poetry
-RUN pip install poetry==1.7.1
+RUN pip install poetry==${POETRY_VERSION}
 
 # Configure Poetry to not create virtual environment
 ENV POETRY_NO_INTERACTION=1 \
@@ -39,10 +40,6 @@ RUN poetry config virtualenvs.create false && \
     poetry install --only=main --no-root && \
     rm -rf $POETRY_CACHE_DIR
 
-# Download spaCy models
-RUN python -m spacy download en_core_web_sm && \
-    python -m spacy download en_core_web_lg
-
 # Production stage
 FROM python:3.12-slim as production
 
@@ -53,9 +50,9 @@ ARG VERSION
 
 # Set labels
 LABEL org.opencontainers.image.title="Portfolio Agent" \
-      org.opencontainers.image.description="A production-ready RAG pipeline with multi-agent architecture" \
-      org.opencontainers.image.url="https://github.com/shelabhtyagi/portfolio-agent" \
-      org.opencontainers.image.source="https://github.com/shelabhtyagi/portfolio-agent" \
+      org.opencontainers.image.description="A persona-grounded RAG toolkit for turning documents into a citable assistant" \
+      org.opencontainers.image.url="https://github.com/shelabh/portfolio-agent-package" \
+      org.opencontainers.image.source="https://github.com/shelabh/portfolio-agent-package" \
       org.opencontainers.image.version=$VERSION \
       org.opencontainers.image.created=$BUILD_DATE \
       org.opencontainers.image.revision=$VCS_REF \
@@ -106,4 +103,4 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/api/v1/health || exit 1
 
 # Default command
-CMD ["python", "-m", "uvicorn", "src.portfolio_agent.api.server:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "-m", "uvicorn", "portfolio_agent.api.server:app", "--host", "0.0.0.0", "--port", "8000"]

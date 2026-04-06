@@ -8,7 +8,7 @@ on:
 
 env:
   PYTHON_VERSION: "3.12"
-  POETRY_VERSION: "1.7.1"
+  POETRY_VERSION: "2.1.4"
 
 jobs:
   test:
@@ -28,8 +28,14 @@ jobs:
           virtualenvs-create: true
           virtualenvs-in-project: true
 
+      - name: Validate Poetry files
+        run: poetry check --lock
+
       - name: Install dependencies
-        run: poetry install --no-interaction
+        run: poetry install --no-interaction --with dev
+
+      - name: Verify runtime imports
+        run: poetry run python -c "import fastapi, portfolio_agent; print(portfolio_agent.__version__)"
 
       - name: Run smoke benchmark
         run: poetry run python scripts/run_evaluation.py --mode smoke --fail-on-regression --output benchmark-smoke.json
@@ -61,8 +67,8 @@ jobs:
           virtualenvs-create: true
           virtualenvs-in-project: true
 
-      - name: Install dependencies
-        run: poetry install --no-interaction
+      - name: Validate Poetry files
+        run: poetry check --lock
 
       - name: Build package
         run: poetry build
