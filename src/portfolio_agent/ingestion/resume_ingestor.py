@@ -152,8 +152,12 @@ class ResumeIngestor:
     
     def extract_metadata(self, file_path: str) -> Dict[str, Any]:
         """Extract metadata from PDF file."""
+        if not os.path.exists(file_path):
+            return {}
+
         metadata = {
             'filename': os.path.basename(file_path),
+            'file_extension': Path(file_path).suffix.lower(),
             'file_size': os.path.getsize(file_path),
             'file_modified': datetime.fromtimestamp(os.path.getmtime(file_path)).isoformat()
         }
@@ -196,6 +200,9 @@ class ResumeIngestor:
     
     def validate_pdf(self, file_path: str) -> bool:
         """Validate that the file is a valid PDF."""
+        if not os.path.exists(file_path) or not file_path.lower().endswith('.pdf'):
+            return False
+
         try:
             if PYMUPDF_AVAILABLE:
                 doc = fitz.open(file_path)

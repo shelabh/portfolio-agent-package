@@ -13,12 +13,13 @@ from dataclasses import dataclass
 
 try:
     import openai
-    from openai import AsyncOpenAI
+    from openai import AsyncOpenAI, OpenAI
     OPENAI_AVAILABLE = True
 except ImportError:
     OPENAI_AVAILABLE = False
     openai = None
     AsyncOpenAI = None
+    OpenAI = None
 
 from ..config import settings
 
@@ -69,6 +70,7 @@ class OpenAIEmbedder:
         
         # Initialize OpenAI client
         self.client = AsyncOpenAI(api_key=self.api_key)
+        self.sync_client = OpenAI(api_key=self.api_key)
         
         logger.info(f"Initialized OpenAI embedder with model: {model}")
     
@@ -154,6 +156,60 @@ class OpenAIEmbedder:
                 
                 # Exponential backoff
                 await asyncio.sleep(2 ** attempt)
+
+    def embed_texts_sync(
+        self,
+        texts: List[str],
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> EmbeddingResult:
+        """Synchronous embedding API for the supported SDK runtime."""
+        if not texts:
+            return EmbeddingResult(embeddings=[], metadata=metadata or {}, processing_time=0.0)
+
+        start_time = time.time()
+        all_embeddings = []
+        total_tokens = 0
+
+        for i in range(0, len(texts), self.batch_size):
+            batch = texts[i:i + self.batch_size]
+            batch_embeddings, batch_tokens = self._embed_batch_sync(batch)
+            all_embeddings.extend(batch_embeddings)
+            total_tokens += batch_tokens
+            if i + self.batch_size < len(texts):
+                time.sleep(self.rate_limit_delay)
+
+        processing_time = time.time() - start_time
+        result_metadata = {
+            **(metadata or {}),
+            "total_texts": len(texts),
+            "batch_size": self.batch_size,
+            "model": self.model,
+        }
+        return EmbeddingResult(
+            embeddings=all_embeddings,
+            metadata=result_metadata,
+            processing_time=processing_time,
+            tokens_used=total_tokens,
+            model_used=self.model,
+        )
+
+    def _embed_batch_sync(self, texts: List[str]) -> tuple[List[List[float]], int]:
+        for attempt in range(self.max_retries):
+            try:
+                response = self.sync_client.embeddings.create(model=self.model, input=texts)
+                embeddings = [data.embedding for data in response.data]
+                tokens_used = response.usage.total_tokens
+                return embeddings, tokens_used
+            except Exception as e:
+                logger.warning(f"Sync embedding attempt {attempt + 1} failed: {e}")
+                if attempt == self.max_retries - 1:
+                    raise RuntimeError(f"Failed to embed texts after {self.max_retries} attempts: {e}")
+                time.sleep(2 ** attempt)
+
+    def embed_single_sync(self, text: str) -> List[float]:
+        """Embed a single text synchronously."""
+        result = self.embed_texts_sync([text])
+        return result.embeddings[0]
     
     async def embed_single(self, text: str) -> List[float]:
         """Embed a single text.

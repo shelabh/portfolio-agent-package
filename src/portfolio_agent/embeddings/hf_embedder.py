@@ -6,26 +6,43 @@ supporting local inference, batch processing, and GPU acceleration.
 """
 
 import logging
-from typing import List, Dict, Any, Optional, Union
+from typing import List, Dict, Any, Optional
 import time
 from dataclasses import dataclass
 import numpy as np
 
 try:
     import torch
-    from transformers import AutoTokenizer, AutoModel
-    from sentence_transformers import SentenceTransformer
-    HF_AVAILABLE = True
 except ImportError:
-    HF_AVAILABLE = False
     torch = None
+
+try:
+    from sentence_transformers import SentenceTransformer
+    SENTENCE_TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    AutoTokenizer = None
+    SentenceTransformer = None
+    SENTENCE_TRANSFORMERS_AVAILABLE = False
+
+try:
+    from transformers import AutoTokenizer, AutoModel
+    TRANSFORMERS_AVAILABLE = True
+except ImportError:
     AutoTokenizer = None
     AutoModel = None
-    SentenceTransformer = None
+    TRANSFORMERS_AVAILABLE = False
 
 from ..config import settings
 
 logger = logging.getLogger(__name__)
+
+KNOWN_EMBEDDING_DIMENSIONS = {
+    "sentence-transformers/all-MiniLM-L6-v2": 384,
+    "all-MiniLM-L6-v2": 384,
+    "sentence-transformers/all-mpnet-base-v2": 768,
+    "all-mpnet-base-v2": 768,
+    "text-embedding-3-small": 1536,
+}
 
 @dataclass
 class EmbeddingResult:
@@ -58,22 +75,18 @@ class HuggingFaceEmbedder:
             max_length: Maximum sequence length for tokenization
             normalize_embeddings: Whether to normalize embeddings to unit vectors
         """
-        if not HF_AVAILABLE:
-            raise ImportError(
-                "Hugging Face libraries not available. Install with: pip install transformers torch sentence-transformers"
-            )
-        
         self.model_name = model_name
         self.use_sentence_transformers = use_sentence_transformers
         self.batch_size = batch_size
         self.max_length = max_length
         self.normalize_embeddings = normalize_embeddings
+        self._embedding_dimension: Optional[int] = KNOWN_EMBEDDING_DIMENSIONS.get(model_name)
         
         # Determine device
         if device is None:
-            if torch.cuda.is_available():
+            if torch and torch.cuda.is_available():
                 self.device = "cuda"
-            elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+            elif torch and hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
                 self.device = "mps"
             else:
                 self.device = "cpu"
@@ -87,17 +100,37 @@ class HuggingFaceEmbedder:
     
     def _load_model(self):
         """Load the embedding model."""
+        if self.use_sentence_transformers and not SENTENCE_TRANSFORMERS_AVAILABLE:
+            raise ImportError(
+                "The default local embedding path requires `sentence-transformers` and its runtime dependencies. "
+                "Install the project dependencies, switch to `EMBEDDING_PROVIDER=openai`, or use the smoke verifier."
+            )
+
+        if not self.use_sentence_transformers and not TRANSFORMERS_AVAILABLE:
+            raise ImportError(
+                "The transformers-based embedding path requires `transformers` and `torch`."
+            )
+
         try:
             if self.use_sentence_transformers:
                 self.model = SentenceTransformer(self.model_name, device=self.device)
                 self.tokenizer = None  # SentenceTransformer handles tokenization
+                if hasattr(self.model, "get_sentence_embedding_dimension"):
+                    self._embedding_dimension = self.model.get_sentence_embedding_dimension()
             else:
                 self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
                 self.model = AutoModel.from_pretrained(self.model_name).to(self.device)
+                hidden_size = getattr(getattr(self.model, "config", None), "hidden_size", None)
+                if hidden_size:
+                    self._embedding_dimension = int(hidden_size)
                 
         except Exception as e:
             logger.error(f"Failed to load model {self.model_name}: {e}")
-            raise RuntimeError(f"Could not load Hugging Face model: {e}")
+            raise RuntimeError(
+                f"Could not load Hugging Face model `{self.model_name}` on device `{self.device}`: {e}. "
+                "If this is the first run, the model may still need to be downloaded. "
+                "If you want a fast repository check, run `python scripts/manual_e2e.py --mode smoke`."
+            )
     
     def embed_texts(
         self,
@@ -223,19 +256,17 @@ class HuggingFaceEmbedder:
         Returns:
             Embedding dimension
         """
+        if self._embedding_dimension:
+            return int(self._embedding_dimension)
+
         try:
-            # Get dimension by embedding a test text
+            # Get dimension by embedding a test text only as a final fallback.
             test_embedding = self.embed_single("test")
+            self._embedding_dimension = len(test_embedding)
             return len(test_embedding)
         except Exception as e:
             logger.warning(f"Could not determine embedding dimension: {e}")
-            # Return common dimensions for popular models
-            if "all-MiniLM-L6-v2" in self.model_name:
-                return 384
-            elif "all-mpnet-base-v2" in self.model_name:
-                return 768
-            else:
-                return 768  # Default fallback
+            return settings.EMBEDDING_DIMENSION
     
     def health_check(self) -> bool:
         """Check if the model is working correctly.

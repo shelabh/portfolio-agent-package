@@ -19,3 +19,21 @@ poetry.lock
 
 # Local environment variable files
 .env
+
+# Local package/build artifacts
+dist/
+build/
+*.egg-info/
+
+# Local vector indexes created by manual runs
+*.faiss
+*.pkl
+
+# Scratch files
+test.py
+
+# Local benchmark reports
+benchmark-*.json
+release-benchmark-*.json
+settings-benchmark.json
+release-artifact-verification.json

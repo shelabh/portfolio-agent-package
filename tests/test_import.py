@@ -1,7 +1,6 @@
-# tests/test_imports.py
-import pytest
+from portfolio_agent import PortfolioAgent, create_app
 
-def test_imports():
-    from portfolio_agent import build_graph, RedisCheckpointer  # noqa: F401
-    assert callable(build_graph)
-    assert build_graph.__name__ == "build_graph"
+
+def test_public_imports():
+    assert PortfolioAgent is not None
+    assert create_app is not None

@@ -60,16 +60,24 @@ class TextChunker:
             if self.preserve_sentences and end < len(text):
                 end = self._find_sentence_boundary(text, start, end)
             
+            # Guard against non-progress when boundary detection or overlap
+            # would otherwise revisit the same slice indefinitely.
+            if end <= start:
+                end = min(start + self.chunk_size, len(text))
+            
             chunk_text = text[start:end].strip()
             if chunk_text:
                 chunk = self._create_chunk(chunk_text, start, end, metadata, chunk_index)
                 chunks.append(chunk)
                 chunk_index += 1
             
-            # Move start position with overlap
-            start = end - self.chunk_overlap
-            if start >= len(text):
+            if end >= len(text):
                 break
+
+            # Move start position with overlap while guaranteeing forward progress.
+            start = end - self.chunk_overlap
+            if start <= chunks[-1]['metadata']['chunk_start']:
+                start = chunks[-1]['metadata']['chunk_end']
         
         logger.info(f"Created {len(chunks)} chunks from text of length {len(text)}")
         return chunks

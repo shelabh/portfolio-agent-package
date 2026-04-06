@@ -1,5 +1,6 @@
 # tests/test_tools.py
 import pytest
+from types import SimpleNamespace
 from unittest.mock import Mock, patch, MagicMock
 import os
 from portfolio_agent.agents.tools.calendly_agent import calendly_agent
@@ -116,51 +117,39 @@ class TestEmailAgent:
             assert result.update["email_sent"] == False
 
 class TestNotesAgent:
-    @patch('portfolio_agent.agents.tools.notes_agent.openai')
-    def test_notes_agent_success(self, mock_openai):
+    @patch('portfolio_agent.agents.tools.notes_agent.client')
+    def test_notes_agent_success(self, mock_client):
         """Test notes agent successfully saves interaction."""
-        state = Mock()
-        state.__dict__ = {"final_answer": "I have Python programming skills."}
-        state.user_id = "user123"
+        state = SimpleNamespace(final_answer="I have Python programming skills.", user_id="user123")
         
         with patch('portfolio_agent.agents.tools.notes_agent.upsert_vector') as mock_upsert:
-            mock_openai.Embedding.create.return_value = {
-                "data": [{"embedding": [0.1, 0.2, 0.3]}]
-            }
+            mock_client.embeddings.create.return_value = Mock(data=[Mock(embedding=[0.1, 0.2, 0.3])])
             
             result = notes_agent(state)
             assert result.goto == "end"
             assert "note_id" in result.update
             mock_upsert.assert_called_once()
 
-    @patch('portfolio_agent.agents.tools.notes_agent.openai')
-    def test_notes_agent_fallback_to_candidate(self, mock_openai):
+    @patch('portfolio_agent.agents.tools.notes_agent.client')
+    def test_notes_agent_fallback_to_candidate(self, mock_client):
         """Test notes agent uses candidate_answer when final_answer is missing."""
-        state = Mock()
-        state.__dict__ = {"candidate_answer": "Fallback answer"}
-        state.user_id = "user123"
+        state = SimpleNamespace(candidate_answer="Fallback answer", user_id="user123")
         
         with patch('portfolio_agent.agents.tools.notes_agent.upsert_vector') as mock_upsert:
-            mock_openai.Embedding.create.return_value = {
-                "data": [{"embedding": [0.1, 0.2, 0.3]}]
-            }
+            mock_client.embeddings.create.return_value = Mock(data=[Mock(embedding=[0.1, 0.2, 0.3])])
             
             result = notes_agent(state)
             assert result.goto == "end"
             assert "note_id" in result.update
             mock_upsert.assert_called_once()
 
-    @patch('portfolio_agent.agents.tools.notes_agent.openai')
-    def test_notes_agent_anonymous_user(self, mock_openai):
+    @patch('portfolio_agent.agents.tools.notes_agent.client')
+    def test_notes_agent_anonymous_user(self, mock_client):
         """Test notes agent handles anonymous users."""
-        state = Mock()
-        state.__dict__ = {"final_answer": "Test answer"}
-        state.user_id = None  # No user_id set
+        state = SimpleNamespace(final_answer="Test answer", user_id=None)
         
         with patch('portfolio_agent.agents.tools.notes_agent.upsert_vector') as mock_upsert:
-            mock_openai.Embedding.create.return_value = {
-                "data": [{"embedding": [0.1, 0.2, 0.3]}]
-            }
+            mock_client.embeddings.create.return_value = Mock(data=[Mock(embedding=[0.1, 0.2, 0.3])])
             
             result = notes_agent(state)
             assert result.goto == "end"

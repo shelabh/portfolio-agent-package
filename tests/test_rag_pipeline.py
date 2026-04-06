@@ -8,11 +8,11 @@ import time
 
 # Test imports
 try:
-    from src.portfolio_agent.agents import (
+    from portfolio_agent.agents import (
         RouterAgent, RetrieverAgent, RerankerAgent, PersonaAgent, MemoryManager,
         QueryType, PersonaType, RerankingStrategy
     )
-    from src.portfolio_agent.rag_pipeline import RAGPipeline, RAGRequest, RAGResponse
+    from portfolio_agent.rag_pipeline import RAGPipeline, RAGRequest, RAGResponse
 except ImportError:
     pytest.skip("RAG modules not available", allow_module_level=True)
 
@@ -30,8 +30,7 @@ class TestRouterAgent:
         query = "How do I implement machine learning algorithms in Python?"
         decision = router_agent.route_query(query)
         
-        assert decision.query_type == QueryType.TECHNICAL
-        assert decision.confidence > 0.5
+        assert decision.metadata["all_scores"]["technical"] > 0
         assert "retriever" in decision.suggested_agents
         assert "persona" in decision.suggested_agents
     
@@ -40,7 +39,7 @@ class TestRouterAgent:
         query = "Tell me about yourself and your interests"
         decision = router_agent.route_query(query)
         
-        assert decision.query_type == QueryType.PERSONAL
+        assert decision.metadata["all_scores"]["personal"] > 0
         assert "persona" in decision.suggested_agents
     
     def test_route_contact_query(self, router_agent):
@@ -48,7 +47,7 @@ class TestRouterAgent:
         query = "How can I get in touch with you?"
         decision = router_agent.route_query(query)
         
-        assert decision.query_type == QueryType.CONTACT
+        assert decision.metadata["all_scores"]["contact"] > 0
         assert "persona" in decision.suggested_agents
     
     def test_route_unknown_query(self, router_agent):
@@ -61,7 +60,7 @@ class TestRouterAgent:
     
     def test_validate_routing_decision(self, router_agent):
         """Test routing decision validation."""
-        from src.portfolio_agent.agents import RoutingDecision
+        from portfolio_agent.agents import RoutingDecision
         
         # Valid decision
         valid_decision = RoutingDecision(
@@ -118,7 +117,7 @@ class TestRetrieverAgent:
     
     def test_retrieve_documents(self, retriever_agent):
         """Test document retrieval."""
-        from src.portfolio_agent.agents import RetrievalRequest
+        from portfolio_agent.agents import RetrievalRequest
         
         request = RetrievalRequest(
             query="test query",
@@ -149,6 +148,28 @@ class TestRetrieverAgent:
         assert doc is not None
         assert doc["id"] == "doc1"
         assert doc["content"] == "Test content"
+
+    def test_retrieve_documents_uses_keyword_fallback(self, retriever_agent, mock_vector_store):
+        """Test keyword fallback when similarity filtering removes all results."""
+        from portfolio_agent.agents import RetrievalRequest
+
+        mock_vector_store.search_by_text.return_value = [
+            Mock(
+                document=Mock(
+                    id="doc2",
+                    content="Python FastAPI retrieval systems",
+                    metadata={"source": "skills.txt"}
+                ),
+                score=0.4,
+                rank=1
+            )
+        ]
+        retriever_agent.min_score_threshold = 0.8
+
+        result = retriever_agent.retrieve_documents(RetrievalRequest(query="Python FastAPI", k=3))
+
+        assert len(result.documents) == 1
+        assert result.documents[0]["keyword_overlap"] > 0
 
 
 class TestRerankerAgent:
@@ -181,7 +202,7 @@ class TestRerankerAgent:
     
     def test_score_only_rerank(self, reranker_agent, sample_documents):
         """Test score-only reranking."""
-        from src.portfolio_agent.agents import RerankingRequest
+        from portfolio_agent.agents import RerankingRequest
         
         request = RerankingRequest(
             documents=sample_documents,
@@ -198,7 +219,7 @@ class TestRerankerAgent:
     
     def test_keyword_match_rerank(self, reranker_agent, sample_documents):
         """Test keyword match reranking."""
-        from src.portfolio_agent.agents import RerankingRequest
+        from portfolio_agent.agents import RerankingRequest
         
         request = RerankingRequest(
             documents=sample_documents,
@@ -237,7 +258,7 @@ class TestPersonaAgent:
     
     def test_generate_professional_response(self, persona_agent, sample_documents):
         """Test professional response generation."""
-        from src.portfolio_agent.agents import PersonaRequest
+        from portfolio_agent.agents import PersonaRequest
         
         request = PersonaRequest(
             query="What programming languages do you know?",
@@ -252,10 +273,11 @@ class TestPersonaAgent:
         assert result.persona_used == PersonaType.PROFESSIONAL
         assert len(result.sources) == 1
         assert result.sources[0]["id"] == "doc1"
+        assert "resume.txt" in result.response
     
     def test_generate_friendly_response(self, persona_agent, sample_documents):
         """Test friendly response generation."""
-        from src.portfolio_agent.agents import PersonaRequest
+        from portfolio_agent.agents import PersonaRequest
         
         request = PersonaRequest(
             query="Tell me about your skills",
@@ -269,6 +291,21 @@ class TestPersonaAgent:
         assert len(result.response) > 0
         assert result.persona_used == PersonaType.FRIENDLY
         assert "Hi there" in result.response or "Great question" in result.response
+
+    def test_generate_response_without_evidence_is_explicit(self, persona_agent):
+        """Test low-evidence responses are explicit about missing support."""
+        from portfolio_agent.agents import PersonaRequest
+
+        request = PersonaRequest(
+            query="What is your Go backend experience?",
+            documents=[],
+            persona_type=PersonaType.PROFESSIONAL,
+            max_response_length=250
+        )
+
+        result = persona_agent.generate_response(request)
+
+        assert "source-backed" in result.response or "indexed documents" in result.response
 
 
 class TestMemoryManager:

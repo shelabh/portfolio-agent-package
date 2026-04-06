@@ -34,9 +34,12 @@ class Settings(BaseSettings):
     DEFAULT_MODEL: str = Field(default="gpt-4o-mini", description="Default LLM model")
     
     # ===== EMBEDDINGS =====
-    EMBEDDING_PROVIDER: str = Field(default="openai", description="Embedding provider: openai, hf, local")
-    EMBEDDING_MODEL: str = Field(default="text-embedding-3-small", description="Embedding model")
-    EMBEDDING_DIMENSION: int = Field(default=1536, description="Embedding dimension")
+    EMBEDDING_PROVIDER: str = Field(default="hf", description="Embedding provider: openai or hf")
+    EMBEDDING_MODEL: str = Field(default="sentence-transformers/all-MiniLM-L6-v2", description="Embedding model")
+    EMBEDDING_DIMENSION: int = Field(default=384, description="Embedding dimension")
+    EMBEDDING_DEVICE: Optional[str] = Field(default=None, description="Embedding runtime device: cpu, cuda, mps, or auto")
+    EMBEDDING_BATCH_SIZE: int = Field(default=16, description="Batch size for embedding generation")
+    HF_USE_SENTENCE_TRANSFORMERS: bool = Field(default=True, description="Use sentence-transformers for local HF embeddings")
     
     # ===== VECTOR STORES =====
     VECTOR_STORE: str = Field(default="faiss", description="Vector store: faiss, pinecone, opensearch, pgvector")
@@ -130,6 +133,14 @@ class Settings(BaseSettings):
     @classmethod
     def validate_redact_pii(cls, v):
         """Ensure REDACT_PII is properly set."""
+        if isinstance(v, str):
+            return v.lower() in ('true', '1', 'yes', 'on')
+        return bool(v)
+
+    @field_validator('HF_USE_SENTENCE_TRANSFORMERS', mode='before')
+    @classmethod
+    def validate_hf_use_sentence_transformers(cls, v):
+        """Ensure HF_USE_SENTENCE_TRANSFORMERS is properly set."""
         if isinstance(v, str):
             return v.lower() in ('true', '1', 'yes', 'on')
         return bool(v)

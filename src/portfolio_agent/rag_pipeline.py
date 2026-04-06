@@ -35,8 +35,12 @@ class RAGState(TypedDict):
     reranked_documents: List[Dict[str, Any]]
     response: str
     sources: List[Dict[str, Any]]
+    response_metadata: Dict[str, Any]
     metadata: Dict[str, Any]
     error: Optional[str]
+    max_documents: int
+    persona_type: str
+    include_sources: bool
 
 @dataclass
 class RAGRequest:
@@ -67,7 +71,8 @@ class RAGPipeline:
         retriever_agent: RetrieverAgent,
         reranker_agent: RerankerAgent,
         persona_agent: PersonaAgent,
-        memory_manager: MemoryManager
+        memory_manager: MemoryManager,
+        checkpointer=None,
     ):
         """Initialize RAG pipeline.
         
@@ -90,11 +95,11 @@ class RAGPipeline:
         self.memory_manager = memory_manager
         
         # Build the graph
-        self.graph = self._build_graph()
+        self.graph = self._build_graph(checkpointer=checkpointer)
         
         logger.info("RAG pipeline initialized")
     
-    def _build_graph(self) -> StateGraph:
+    def _build_graph(self, checkpointer=None) -> StateGraph:
         """Build the LangGraph state graph.
         
         Returns:
@@ -135,7 +140,7 @@ class RAGPipeline:
         # Memory is the end
         graph.add_edge("memory", END)
         
-        return graph.compile()
+        return graph.compile(checkpointer=checkpointer)
     
     def _router_node(self, state: RAGState) -> RAGState:
         """Router node for query classification."""
@@ -191,7 +196,7 @@ class RAGPipeline:
             # Create retrieval request
             request = RetrievalRequest(
                 query=state["query"],
-                k=5,  # Default k
+                k=state.get("max_documents", 5),
                 include_metadata=True
             )
             
@@ -227,7 +232,7 @@ class RAGPipeline:
                 documents=documents,
                 query=state["query"],
                 strategy=RerankingStrategy.HYBRID,
-                max_results=5
+                max_results=state.get("max_documents", 5)
             )
             
             # Rerank documents
@@ -255,12 +260,14 @@ class RAGPipeline:
             documents = state.get("reranked_documents", state.get("retrieved_documents", []))
             
             # Create persona request
+            persona_type = PersonaType(state.get("persona_type", PersonaType.PROFESSIONAL.value))
             request = PersonaRequest(
                 query=state["query"],
                 documents=documents,
-                persona_type=PersonaType.PROFESSIONAL,  # Default persona
+                persona_type=persona_type,
                 max_response_length=500,
-                include_sources=True
+                include_sources=state.get("include_sources", True),
+                context=state.get("metadata"),
             )
             
             # Generate response
@@ -268,6 +275,7 @@ class RAGPipeline:
             
             state["response"] = result.response
             state["sources"] = result.sources
+            state["response_metadata"] = result.metadata
             
             logger.info("Generated persona response")
             
@@ -276,6 +284,7 @@ class RAGPipeline:
             state["error"] = str(e)
             state["response"] = "I apologize, but I'm having trouble generating a response right now."
             state["sources"] = []
+            state["response_metadata"] = {"error": str(e), "evidence_strength": "none"}
         
         return state
     
@@ -333,8 +342,12 @@ class RAGPipeline:
                 reranked_documents=[],
                 response="",
                 sources=[],
-                metadata={},
-                error=None
+                response_metadata={},
+                metadata=request.context or {},
+                error=None,
+                max_documents=request.max_documents,
+                persona_type=request.persona_type.value,
+                include_sources=request.include_sources,
             )
             
             # Run the graph
@@ -352,6 +365,9 @@ class RAGPipeline:
                     "routing_decision": final_state.get("routing_decision"),
                     "documents_retrieved": len(final_state.get("retrieved_documents", [])),
                     "documents_reranked": len(final_state.get("reranked_documents", [])),
+                    "retrieved_sources": self._source_labels(final_state.get("retrieved_documents", [])),
+                    "reranked_sources": self._source_labels(final_state.get("reranked_documents", [])),
+                    "response_metadata": final_state.get("response_metadata", {}),
                     "error": final_state.get("error")
                 }
             )
@@ -382,6 +398,15 @@ class RAGPipeline:
             "persona_stats": self.persona_agent.get_persona_stats(),
             "memory_stats": self.memory_manager.get_memory_stats()
         }
+
+    def _source_labels(self, documents: List[Dict[str, Any]]) -> List[str]:
+        labels: List[str] = []
+        for document in documents:
+            metadata = document.get("metadata", {})
+            label = metadata.get("source") or document.get("id", "")
+            if label and label not in labels:
+                labels.append(label)
+        return labels
 
 # Convenience function for easy access
 def create_rag_pipeline(

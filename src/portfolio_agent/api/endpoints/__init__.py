@@ -1,17 +1,5 @@
-"""
-API Endpoints
+"""Supported API endpoints."""
 
-This module provides all API endpoints for the Portfolio Agent.
-"""
+from . import documents, health, query
 
-from . import health, query, documents, agents, metrics, security, admin
-
-__all__ = [
-    'health',
-    'query', 
-    'documents',
-    'agents',
-    'metrics',
-    'security',
-    'admin'
-]
+__all__ = ["health", "query", "documents"]

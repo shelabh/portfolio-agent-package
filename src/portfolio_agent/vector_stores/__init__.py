@@ -1,8 +1,8 @@
 """
 Vector Stores Module
 
-This module provides vector store implementations for various backends
-including FAISS, Pinecone, OpenSearch, and pgvector.
+This module exposes the supported local FAISS vector store used by the
+canonical PortfolioAgent SDK path.
 """
 
 from .faiss_store import FAISSVectorStore, VectorDocument, SearchResult, create_faiss_store

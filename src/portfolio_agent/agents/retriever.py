@@ -6,8 +6,10 @@ with configurable search parameters and result filtering.
 """
 
 import logging
-from typing import Dict, Any, List, Optional, Union
+from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
+
+from ..text_matching import keyword_overlap, non_discriminative_terms
 
 logger = logging.getLogger(__name__)
 
@@ -84,21 +86,48 @@ class RetrieverAgent:
                 k=request.k,
                 filter_metadata=request.filter_metadata
             )
+
+            ignored_terms = non_discriminative_terms(
+                request.query,
+                [result.document.content for result in search_results],
+            )
             
             # Filter results by score
             filtered_results = [
                 result for result in search_results
                 if result.score >= max(request.min_score, self.min_score_threshold)
             ]
+
+            if filtered_results and not any(
+                self._keyword_overlap(request.query, result.document.content, ignored_terms=ignored_terms) > 0
+                for result in filtered_results
+            ):
+                filtered_results = []
+
+            if not filtered_results and search_results:
+                filtered_results = self._fallback_results(search_results, request.query, request.k, ignored_terms)
             
             # Convert to document format
             documents = []
+            seen = set()
             for result in filtered_results:
+                source = getattr(result.document, "metadata", {}).get("source", "")
+                dedupe_key = (result.document.id, source, result.document.content[:160])
+                if dedupe_key in seen:
+                    continue
+                seen.add(dedupe_key)
+
+                keyword_overlap = self._keyword_overlap(
+                    request.query,
+                    result.document.content,
+                    ignored_terms=ignored_terms,
+                )
                 doc = {
                     "id": result.document.id,
                     "content": result.document.content,
                     "score": result.score,
-                    "rank": result.rank
+                    "rank": result.rank,
+                    "keyword_overlap": keyword_overlap,
                 }
                 
                 if request.include_metadata:
@@ -118,6 +147,10 @@ class RetrieverAgent:
                     "k_requested": request.k,
                     "min_score_used": max(request.min_score, self.min_score_threshold),
                     "filter_applied": request.filter_metadata is not None,
+                    "fallback_used": not bool([
+                        result for result in search_results
+                        if result.score >= max(request.min_score, self.min_score_threshold)
+                    ]),
                     "context_provided": context is not None
                 }
             )
@@ -265,6 +298,26 @@ class RetrieverAgent:
         except Exception as e:
             logger.error(f"Error getting retrieval stats: {e}")
             return {"error": str(e)}
+
+    def _keyword_overlap(self, query: str, content: str, *, ignored_terms=None) -> int:
+        return keyword_overlap(query, content, ignored_terms=ignored_terms)
+
+    def _fallback_results(self, search_results, query: str, k: int, ignored_terms=None):
+        """Use query-term overlap as a fallback when strict similarity filtering removes everything."""
+        ranked = sorted(
+            search_results,
+            key=lambda result: (
+                self._keyword_overlap(query, result.document.content, ignored_terms=ignored_terms),
+                result.score,
+            ),
+            reverse=True,
+        )
+        fallback = [
+            result
+            for result in ranked
+            if self._keyword_overlap(query, result.document.content, ignored_terms=ignored_terms) > 0
+        ]
+        return fallback[:k]
 
 # Convenience function for easy access
 def create_retriever_agent(vector_store, embedder, **kwargs) -> RetrieverAgent:

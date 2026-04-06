@@ -5,9 +5,12 @@ This module provides response generation with personality and context awareness.
 """
 
 import logging
+import re
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
 from enum import Enum
+
+from ..text_matching import extract_terms, keyword_overlap, non_discriminative_terms
 
 logger = logging.getLogger(__name__)
 
@@ -92,21 +95,29 @@ class PersonaAgent:
                 self.persona_templates[self.default_persona]
             )
             
-            # Extract relevant information from documents
-            relevant_info = self._extract_relevant_info(request.documents, request.query)
+            # Extract query-aligned evidence from documents.
+            evidence_items = self._extract_evidence(request.documents, request.query)
+            evidence_strength = self._assess_evidence_strength(evidence_items)
             
             # Generate response based on persona
             response = self._generate_persona_response(
                 query=request.query,
-                relevant_info=relevant_info,
+                evidence_items=evidence_items,
+                evidence_strength=evidence_strength,
+                include_sources=request.include_sources,
                 persona_template=persona_template,
                 max_length=request.max_response_length
             )
             
-            # Prepare sources
+            # Prepare sources from the evidence we actually used when possible.
             sources = []
             if request.include_sources:
-                sources = self._prepare_sources(request.documents)
+                evidence_ids = {item["id"] for item in evidence_items}
+                source_documents = [
+                    document for document in request.documents
+                    if not evidence_ids or document.get("id", "") in evidence_ids
+                ]
+                sources = self._prepare_sources(source_documents)
             
             response_time = time.time() - start_time
             
@@ -118,6 +129,10 @@ class PersonaAgent:
                 response_time=response_time,
                 metadata={
                     "documents_used": len(request.documents),
+                    "evidence_used": len(evidence_items),
+                    "evidence_source_ids": [item["id"] for item in evidence_items],
+                    "evidence_sources": [item["source"] for item in evidence_items],
+                    "evidence_strength": evidence_strength,
                     "max_length": request.max_response_length,
                     "include_sources": request.include_sources,
                     "context_provided": context is not None
@@ -138,71 +153,137 @@ class PersonaAgent:
                 metadata={"error": str(e)}
             )
     
-    def _extract_relevant_info(
+    def _extract_evidence(
         self,
         documents: List[Dict[str, Any]],
         query: str
-    ) -> str:
-        """Extract relevant information from documents."""
+    ) -> List[Dict[str, Any]]:
+        """Extract source-backed evidence snippets from retrieved documents."""
         if not documents:
-            return "I don't have specific information about that topic."
-        
-        # Combine content from top documents
-        relevant_content = []
-        for doc in documents[:3]:  # Use top 3 documents
+            return []
+
+        ignored_terms = non_discriminative_terms(query, [doc.get("content", "") for doc in documents[:5]])
+        query_terms = self._query_terms(query, ignored_terms=ignored_terms)
+        evidence_items: List[Dict[str, Any]] = []
+
+        for doc in documents[:5]:
             content = doc.get("content", "")
-            if content:
-                # Truncate long content
-                if len(content) > 200:
-                    content = content[:200] + "..."
-                relevant_content.append(content)
-        
-        return " ".join(relevant_content)
+            if not content:
+                continue
+
+            snippet, overlap = self._best_snippet(content, query_terms)
+            if not snippet:
+                continue
+
+            metadata = doc.get("metadata", {})
+            evidence_items.append(
+                {
+                    "id": doc.get("id", ""),
+                    "source": metadata.get("source") or doc.get("id", ""),
+                    "score": float(doc.get("score", 0.0)),
+                    "overlap": overlap,
+                    "snippet": snippet,
+                }
+            )
+
+        evidence_items.sort(key=lambda item: (item["overlap"], item["score"]), reverse=True)
+        return evidence_items[:3]
+
+    def _assess_evidence_strength(self, evidence_items: List[Dict[str, Any]]) -> str:
+        """Classify how strong the currently available evidence is."""
+        if not evidence_items:
+            return "none"
+
+        top_item = evidence_items[0]
+        if top_item["overlap"] >= 2 or top_item["score"] >= 0.8:
+            return "strong"
+        if top_item["overlap"] >= 1 or top_item["score"] >= 0.6:
+            return "moderate"
+        return "weak"
     
     def _generate_persona_response(
         self,
         query: str,
-        relevant_info: str,
+        evidence_items: List[Dict[str, Any]],
+        evidence_strength: str,
+        include_sources: bool,
         persona_template: Dict[str, str],
         max_length: int
     ) -> str:
         """Generate response using persona template."""
-        # Start with greeting
         response_parts = [persona_template["greeting"]]
-        
-        # Add transition
         response_parts.append(persona_template["transition"])
-        
-        # Add relevant information
-        if relevant_info and relevant_info != "I don't have specific information about that topic.":
-            response_parts.append(relevant_info)
+
+        if evidence_items and evidence_strength != "weak":
+            evidence_text = " ".join(
+                self._format_evidence_item(item, include_sources=include_sources)
+                for item in evidence_items
+            )
+            response_parts.append(f"the indexed sources support the following: {evidence_text}")
+        elif evidence_items:
+            tentative = self._format_evidence_item(evidence_items[0], include_sources=include_sources)
+            response_parts.append(
+                "I found only limited support in the indexed sources, so this may be incomplete. "
+                f"The strongest matching evidence is: {tentative}"
+            )
         else:
-            response_parts.append("I don't have specific information about that topic in my knowledge base.")
-        
-        # Add conclusion
+            response_parts.append(
+                "I don't have enough source-backed information in the indexed documents to answer that confidently."
+            )
+
         response_parts.append(persona_template["conclusion"])
-        
-        # Combine and truncate if necessary
         full_response = " ".join(response_parts)
         
         if len(full_response) > max_length:
-            # Truncate at sentence boundary
-            sentences = full_response.split('. ')
-            truncated = []
-            current_length = 0
-            
-            for sentence in sentences:
-                if current_length + len(sentence) + 2 <= max_length:  # +2 for '. '
-                    truncated.append(sentence)
-                    current_length += len(sentence) + 2
-                else:
-                    break
-            
-            full_response = '. '.join(truncated)
-            if not full_response.endswith('.'):
-                full_response += '.'
+            full_response = self._truncate_response(full_response, max_length)
         
         return full_response
+
+    def _format_evidence_item(self, item: Dict[str, Any], *, include_sources: bool) -> str:
+        snippet = item["snippet"]
+        if include_sources:
+            return f"(source: {item['source']}) {snippet}"
+        return snippet
+
+    def _query_terms(self, query: str, *, ignored_terms=None) -> List[str]:
+        return extract_terms(query, ignored_terms=ignored_terms)
+
+    def _best_snippet(self, content: str, query_terms: List[str]) -> tuple[str, int]:
+        segments = [segment.strip() for segment in re.split(r"(?<=[.!?])\s+|\n+", content) if segment.strip()]
+        if not segments:
+            return "", 0
+
+        if not query_terms:
+            best = segments[0]
+            return self._truncate(best), 0
+
+        best_segment = ""
+        best_overlap = -1
+        for segment in segments:
+            overlap = keyword_overlap(" ".join(query_terms), segment)
+            if overlap > best_overlap:
+                best_segment = segment
+                best_overlap = overlap
+
+        if best_overlap <= 0:
+            return "", 0
+
+        return self._truncate(best_segment), best_overlap
+
+    def _truncate(self, text: str, max_chars: int = 220) -> str:
+        if len(text) <= max_chars:
+            return text
+        return text[:max_chars].rstrip() + "..."
+
+    def _truncate_response(self, text: str, max_chars: int) -> str:
+        if len(text) <= max_chars:
+            return text
+
+        truncated = text[: max_chars - 3].rstrip()
+        last_space = truncated.rfind(" ")
+        if last_space > max_chars * 0.6:
+            truncated = truncated[:last_space]
+        return truncated + "..."
     
     def _prepare_sources(self, documents: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Prepare source information from documents."""

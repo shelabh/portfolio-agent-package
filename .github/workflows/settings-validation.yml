@@ -1,0 +1,44 @@
+name: Settings Validation
+
+on:
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: "3.12"
+  POETRY_VERSION: "1.7.1"
+  EMBEDDING_PROVIDER: "hf"
+  EMBEDDING_MODEL: "sentence-transformers/all-MiniLM-L6-v2"
+
+jobs:
+  settings-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: ${{ env.POETRY_VERSION }}
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Install dependencies
+        run: poetry install --no-interaction
+
+      - name: Run settings E2E
+        run: poetry run python scripts/manual_e2e.py --mode settings
+
+      - name: Run settings benchmark
+        run: poetry run python scripts/run_evaluation.py --mode settings --fail-on-regression --output settings-benchmark.json
+
+      - name: Upload settings benchmark artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: settings-benchmark
+          path: settings-benchmark.json

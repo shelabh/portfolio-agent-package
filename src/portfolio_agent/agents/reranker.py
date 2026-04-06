@@ -6,10 +6,11 @@ of retrieved documents based on various ranking criteria.
 """
 
 import logging
-import re
 from typing import Dict, Any, List, Optional, Callable
 from dataclasses import dataclass
 from enum import Enum
+
+from ..text_matching import extract_terms, keyword_overlap
 
 logger = logging.getLogger(__name__)
 
@@ -178,14 +179,11 @@ class RerankerAgent:
         Returns:
             Reranked documents
         """
-        query_words = set(re.findall(r'\b\w+\b', query.lower()))
+        query_words = set(extract_terms(query))
         
         def calculate_keyword_score(doc):
-            content = doc.get("content", "").lower()
-            content_words = set(re.findall(r'\b\w+\b', content))
-            
-            # Calculate keyword overlap
-            overlap = len(query_words.intersection(content_words))
+            content = doc.get("content", "")
+            overlap = keyword_overlap(query, content)
             total_query_words = len(query_words)
             
             if total_query_words == 0:

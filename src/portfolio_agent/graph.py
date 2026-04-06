@@ -1,30 +1,23 @@
-# src/portfolio_agent/graph.py - Legacy graph for backward compatibility
+"""Deprecated graph compatibility helpers."""
 
-from langgraph.graph import StateGraph, MessagesState, START, END
-from typing import Literal
+import warnings
 
-# Import the new RAG pipeline instead
-from .rag_pipeline import RAGPipeline
+from .sdk import PortfolioAgent
 
 def build_graph(checkpointer=None):
     """
-    Build the LangGraph StateGraph for backward compatibility.
-    For new implementations, use RAGPipeline directly.
+    Build the canonical LangGraph for backwards compatibility.
+
+    Deprecated: use PortfolioAgent for supported SDK usage.
     """
-    # For backward compatibility, return a simple graph
-    graph = StateGraph(MessagesState)
-    
-    # Add a simple persona node
-    def simple_persona_node(state: MessagesState) -> MessagesState:
-        """Simple persona node for backward compatibility."""
-        # This is a placeholder - use RAGPipeline for full functionality
-        return state
-    
-    graph.add_node("persona_agent", simple_persona_node)
-    graph.set_entry_point("persona_agent")
-    graph.add_edge("persona_agent", END)
-    
-    return graph.compile(checkpointer=checkpointer)
+    warnings.warn(
+        "build_graph() is deprecated and will be removed in a future release. "
+        "Use PortfolioAgent for the supported public API.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    agent = PortfolioAgent.from_settings()
+    return agent.pipeline.graph
 
 if __name__ == "__main__":
     graph = build_graph()

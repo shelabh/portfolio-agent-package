@@ -9,6 +9,7 @@ import os
 import json
 import pickle
 import logging
+import inspect
 from typing import List, Dict, Any, Optional, Tuple, Union
 import numpy as np
 from dataclasses import dataclass, asdict
@@ -135,7 +136,9 @@ class FAISSVectorStore:
             # Normalize vector if needed
             vector = np.array(doc.vector, dtype=np.float32)
             if normalize_vectors and self.metric == "cosine":
-                vector = vector / np.linalg.norm(vector)
+                norm = np.linalg.norm(vector)
+                if norm > 0:
+                    vector = vector / norm
             
             vectors.append(vector)
             self.documents[doc.id] = doc
@@ -193,6 +196,21 @@ class FAISSVectorStore:
             documents.append(doc)
         
         return self.add_documents(documents)
+
+    def add_document(
+        self,
+        document_id: str,
+        content: str,
+        embedding: List[float],
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> List[str]:
+        """Compatibility helper for adding a single document."""
+        return self.add_texts(
+            texts=[content],
+            vectors=[embedding],
+            metadatas=[metadata or {}],
+            ids=[document_id],
+        )
     
     def search(
         self,
@@ -218,7 +236,9 @@ class FAISSVectorStore:
         # Normalize query vector if needed
         query_array = np.array(query_vector, dtype=np.float32).reshape(1, -1)
         if normalize_vector and self.metric == "cosine":
-            query_array = query_array / np.linalg.norm(query_array)
+            norm = np.linalg.norm(query_array)
+            if norm > 0:
+                query_array = query_array / norm
         
         # Search in FAISS index
         scores, indices = self.index.search(query_array, min(k * 2, len(self.documents)))
@@ -276,13 +296,24 @@ class FAISSVectorStore:
             List of search results
         """
         # Get embedding for the text
-        if hasattr(embedder, 'embed_single'):
+        if hasattr(embedder, 'embed_single_sync'):
+            query_vector = embedder.embed_single_sync(text)
+        elif hasattr(embedder, 'embed_single'):
             query_vector = embedder.embed_single(text)
+            if inspect.isawaitable(query_vector):
+                raise RuntimeError(
+                    "The configured embedder only exposes an async query API. "
+                    "Use an embedder with embed_single_sync for the supported runtime."
+                )
         else:
             # Assume it's a function
             query_vector = embedder(text)
         
         return self.search(query_vector, k, filter_metadata)
+
+    def is_initialized(self) -> bool:
+        """Return whether the vector store is ready for reads/writes."""
+        return self.index is not None
     
     def get_document(self, doc_id: str) -> Optional[VectorDocument]:
         """Get a document by ID.
@@ -379,16 +410,45 @@ class FAISSVectorStore:
         
         try:
             # Load FAISS index
-            self.index = faiss.read_index(f"{load_path}.faiss")
+            loaded_index = faiss.read_index(f"{load_path}.faiss")
             
             # Load documents and metadata
             with open(f"{load_path}.pkl", "rb") as f:
                 data = pickle.load(f)
-                self.documents = data['documents']
-                self.metadata_index = data.get('metadata_index', {})
-                self.dimension = data.get('dimension', self.dimension)
-                self.index_type = data.get('index_type', self.index_type)
-                self.metric = data.get('metric', self.metric)
+                loaded_documents = data['documents']
+                loaded_metadata_index = data.get('metadata_index', {})
+                stored_dimension = data.get('dimension', self.dimension)
+                stored_index_type = data.get('index_type', self.index_type)
+                stored_metric = data.get('metric', self.metric)
+
+            index_dimension = getattr(loaded_index, 'd', stored_dimension)
+            if stored_dimension != self.dimension or index_dimension != self.dimension:
+                raise ValueError(
+                    "Stored FAISS index is incompatible with the configured embedder dimension. "
+                    f"Expected {self.dimension}, found stored={stored_dimension}, index={index_dimension}. "
+                    "Use a different FAISS_INDEX_PATH or remove the old index files."
+                )
+
+            if stored_index_type != self.index_type or stored_metric != self.metric:
+                raise ValueError(
+                    "Stored FAISS index settings do not match the configured runtime. "
+                    f"Expected ({self.index_type}, {self.metric}), found ({stored_index_type}, {stored_metric}). "
+                    "Use a different FAISS_INDEX_PATH or remove the old index files."
+                )
+
+            if hasattr(loaded_index, 'ntotal') and loaded_index.ntotal != len(loaded_documents):
+                raise ValueError(
+                    "Stored FAISS index and document metadata are out of sync. "
+                    f"Index contains {loaded_index.ntotal} vectors but metadata has {len(loaded_documents)} documents. "
+                    "Use a different FAISS_INDEX_PATH or remove the old index files."
+                )
+
+            self.index = loaded_index
+            self.documents = loaded_documents
+            self.metadata_index = loaded_metadata_index
+            self.dimension = stored_dimension
+            self.index_type = stored_index_type
+            self.metric = stored_metric
             
             logger.info(f"Loaded vector store from {load_path} with {len(self.documents)} documents")
             

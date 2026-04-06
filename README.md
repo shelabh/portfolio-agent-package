@@ -1,380 +1,228 @@
-# Portfolio Agent
+# portfolio-agent
 
-A production-ready RAG (Retrieval-Augmented Generation) pipeline with multi-agent architecture, memory management, and tool integration. Built with security-first principles and enterprise-grade features.
+`portfolio-agent` is an open-source Python toolkit for turning a person's or team's documents, repositories, and web content into a citable, persona-aware assistant.
 
-## 🚀 Features
+The repository is intentionally standardized around one supported path:
+- ingest content with `PortfolioAgent`
+- index it into the local `FAISSVectorStore`
+- query it through the built-in persona-grounded `RAGPipeline`
 
-### Core Capabilities
-- **Multi-Agent Architecture**: Sophisticated pipeline with specialized agents for routing, retrieval, reranking, response generation, and quality control
-- **Memory Management**: Enhanced user context and conversation history tracking with Redis persistence
-- **Tool Integration**: Built-in support for Calendly scheduling, email drafting, and note-taking
-- **Quality Assurance**: Built-in critic agent to prevent hallucinations and ensure factual accuracy
+## What Is Supported
 
-### Security & Privacy
-- **Safe-by-Default**: LOCAL_ONLY mode, automatic PII redaction, consent management
-- **Data Protection**: Encryption at rest and in transit, access controls, audit logging
-- **Compliance Ready**: GDPR, CCPA, SOC 2 compliance features
-- **Secret Management**: Secure handling of API keys and sensitive data
+- Python SDK via `PortfolioAgent`
+- Local FAISS indexing
+- File ingestion for text/markdown/html/json/docx/pdf
+- GitHub and website ingestion through the SDK
+- Querying with citations and lightweight session memory
+- Optional FastAPI wrapper via `create_app(...)`
 
-### Vector Search & Embeddings
-- **Multiple Vector Stores**: FAISS (local), Pinecone (cloud), OpenSearch (enterprise), pgvector
-- **Embedding Providers**: OpenAI, Hugging Face, local sentence-transformers
-- **Advanced RAG**: Multi-stage retrieval, reranking, citation tracking
-- **Fine-tuning**: PEFT/LoRA examples for custom model training
+## What Is Not the Supported Surface
 
-### LLM Backends
-- **OpenAI**: GPT models via OpenAI API
-- **Hugging Face**: Local and hosted HF models
-- **AWS Bedrock**: Enterprise-grade AI services
-- **vLLM**: High-performance local serving
+- the old `build_graph()` entrypoint
+- placeholder enterprise/platform claims
+- legacy example scripts outside the portfolio demo
+- unfinished HTTP endpoints for streaming, batch orchestration, admin, or security tooling
 
-### Document Processing
-- **Multi-format Support**: PDF, TXT, MD, HTML, JSON, DOCX
-- **Smart Ingestion**: GitHub repos, websites, resumes, generic files
-- **PII Redaction**: Automatic detection and redaction of sensitive information
-- **Chunking**: Configurable text chunking with overlap
+## Public Release Scope
 
-## 📦 Installation
+This repository is preparing for a narrow, truthful first public tag.
 
-### Basic Installation
+Release-ready expectations:
+- install from source or package
+- run the smoke/manual path
+- run the smoke benchmark
+- inspect source-backed answers and benchmark output
+
+Not promised in this release:
+- broad production guarantees
+- exhaustive benchmark coverage for every ingestion format
+- automatic validation of every optional runtime in every environment
+
+## Installation
+
+When published as a package:
 
 ```bash
 pip install portfolio-agent
 ```
 
-### With Optional Dependencies
+From a fresh clone:
 
 ```bash
-# For all features
-pip install portfolio-agent[all]
-
-# Or install specific extras
-pip install portfolio-agent[llm,vector,embeddings,finetune,documents,postgres]
+poetry install
 ```
 
-### Development Installation
+From a locally built artifact:
 
 ```bash
-git clone https://github.com/shelabhtyagi/portfolio-agent.git
-cd portfolio-agent
-pip install -e ".[all]"
+poetry build
+pip install dist/portfolio_agent-*.whl
 ```
 
-## 🚀 Quick Start
+For local embeddings, the package defaults to Hugging Face sentence-transformers. The first run may download the configured model.
 
-### 1. Basic Usage
+## Manual Verification
 
-```python
-from portfolio_agent import build_graph, RedisCheckpointer
-
-# Build the agent graph
-graph = build_graph()
-
-# Run a query
-from langgraph.graph.message import MessagesState
-
-state = MessagesState()
-state.messages = [{"role": "user", "content": "What are your skills?"}]
-
-result = graph.run(state)
-print(result.messages[-1]["content"])
-```
-
-### 2. With Configuration
-
-```python
-import os
-from portfolio_agent import build_graph, RedisCheckpointer
-
-# Set environment variables
-os.environ["OPENAI_API_KEY"] = "your-api-key"
-os.environ["LOCAL_ONLY"] = "false"  # Enable external APIs
-os.environ["REDACT_PII"] = "true"   # Automatic PII redaction
-
-# Build with persistence
-checkpointer = RedisCheckpointer()
-graph = build_graph(checkpointer=checkpointer)
-
-# Run with user context
-state = MessagesState()
-state.messages = [{"role": "user", "content": "Tell me about your experience"}]
-state.user_id = "user123"  # For memory management
-
-result = graph.run(state)
-```
-
-### 3. FastAPI Server
-
-```python
-from portfolio_agent import create_demo_app
-import uvicorn
-
-app = create_demo_app()
-uvicorn.run(app, host="0.0.0.0", port=8000)
-```
-
-### Command Line Interface
+The fastest supported end-to-end check from a fresh clone is:
 
 ```bash
-# Set required environment variables
-export OPENAI_API_KEY="your-api-key"
-export DATABASE_URL="postgresql://user:pass@localhost/db"
+python scripts/manual_e2e.py --mode smoke
+```
 
-# Run a single query
-portfolio-agent --query "What are your skills?"
+For the actual configured runtime path:
 
-# Run in interactive mode
+```bash
+python scripts/manual_e2e.py --mode settings
+```
+
+See [docs/MANUAL_E2E.md](docs/MANUAL_E2E.md) for the full SDK, CLI, and API verification flow.
+If your environment can load the real local embedding runtime, you can also run the opt-in integration check documented there.
+
+## Evaluation
+
+The repo also includes a small benchmark for retrieval, grounding, abstention, and source-label quality on the canonical SDK path:
+
+```bash
+python scripts/run_evaluation.py --mode smoke
+```
+
+For the real configured runtime:
+
+```bash
+python scripts/run_evaluation.py --mode settings
+```
+
+See [docs/EVALUATION.md](docs/EVALUATION.md) for what the benchmark covers and what it does not.
+
+## Release Validation
+
+For a maintainer/reviewer release pass:
+
+```bash
+python scripts/release_check.py
+```
+
+For a heavier clean-environment review of the configured embedding runtime:
+
+```bash
+python scripts/release_check.py --include-settings
+```
+
+See [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md) for the minimum release gate and review notes.
+The built-artifact dry run validates the wheel in a temporary virtual environment using available local site packages; it is meant to prove package usability, not to simulate a full online dependency-resolution install.
+For the end-to-end maintainer handoff, see [docs/RELEASE_CANDIDATE.md](docs/RELEASE_CANDIDATE.md).
+
+## Versioning
+
+This project is currently using a pragmatic `0.x` release shape:
+- the canonical `PortfolioAgent` SDK path is the supported contract
+- internals and heuristics may still evolve between minor releases
+- release notes and changelog entries should be read as the source of truth for what changed
+
+Current release candidate: `0.3.0rc1`
+
+See [CHANGELOG.md](CHANGELOG.md) for release notes.
+
+## Quick Start
+
+```python
+from portfolio_agent import PortfolioAgent
+
+agent = PortfolioAgent.from_settings()
+
+agent.add_text(
+    """
+    Jane Doe is a backend engineer who works with Python, FastAPI, and retrieval systems.
+    She has built developer tooling, API platforms, and AI product prototypes.
+    """,
+    source="profile.txt",
+    document_type="txt",
+)
+
+result = agent.query("What does Jane work on?")
+print(result.response)
+print(result.sources)
+```
+
+### Ingest a File
+
+```python
+from portfolio_agent import PortfolioAgent
+
+agent = PortfolioAgent.from_settings()
+agent.add_file("sample_docs/portfolio.txt")
+
+result = agent.query("Summarize the indexed portfolio")
+print(result.response)
+```
+
+### Ingest a GitHub Repo or Website
+
+```python
+from portfolio_agent import PortfolioAgent
+
+agent = PortfolioAgent.from_settings()
+agent.add_github_repository("https://github.com/example/project")
+agent.add_website("https://example.com")
+```
+
+## FastAPI App
+
+```python
+from portfolio_agent import PortfolioAgent, create_app
+
+agent = PortfolioAgent.from_settings()
+app = create_app(agent=agent)
+```
+
+Supported API endpoints:
+- `GET /api/v1/health`
+- `POST /api/v1/query`
+- `POST /api/v1/documents`
+- `POST /api/v1/documents/file`
+
+## CLI
+
+The package exposes a `portfolio-agent` CLI:
+
+```bash
+portfolio-agent --add-file sample_docs/portfolio.txt --query "What are the key skills?"
 portfolio-agent --interactive
-
-# With user context for memory
-portfolio-agent --query "What did we discuss before?" --user-id user123
+portfolio-agent --serve
 ```
+
+If you are validating a fresh clone and want the quickest repeatable check, use `python scripts/manual_e2e.py --mode smoke` before using the heavier local-embedding runtime.
 
 ## Configuration
 
-The agent uses environment variables for configuration. Create a `.env` file or set these variables:
-
-### Required Configuration
+Key environment variables:
 
 ```bash
-# Database connection for vector storage
-DATABASE_URL=postgresql://user:password@localhost:5432/database
-
-# LLM Provider
-OPENAI_API_KEY=your-openai-api-key
+EMBEDDING_PROVIDER=hf
+EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+EMBEDDING_BATCH_SIZE=16
+# EMBEDDING_DEVICE=cpu
+FAISS_INDEX_PATH=./faiss_index
+REDACT_PII=true
+TOP_K_RETRIEVAL=5
 ```
 
-### Optional Configuration
+If you want OpenAI embeddings instead of local embeddings:
 
 ```bash
-# LLM Settings
-LLM_PROVIDER=openai  # or 'vllm'
-DEFAULT_MODEL=gpt-4o-mini
-VLLM_BASE_URL=http://localhost:8000/v1  # for vLLM
-
-# Embeddings
 EMBEDDING_PROVIDER=openai
 EMBEDDING_MODEL=text-embedding-3-small
-
-# Database
-VECTOR_TABLE=documents
-
-# Persona
-PERSONA_PROMPT="You are a professional assistant. Maintain a formal, concise tone."
-
-# Tools
-CALENDLY_API_KEY=your-calendly-key
-EMAIL_FROM=assistant@example.com
-SMTP_HOST=smtp.example.com
-SMTP_PORT=587
-SMTP_USER=username
-SMTP_PASS=password
-
-# Redis
-REDIS_URL=redis://localhost:6379/0
+OPENAI_API_KEY=your-key
 ```
 
-## 🏗️ Architecture
+## Canonical Architecture
 
-### Modular Design
-
-The Portfolio Agent follows a modular, extensible architecture:
-
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Ingestors     │    │   Embeddings    │    │  Vector Stores  │
-│ • GitHub        │───▶│ • OpenAI        │───▶│ • FAISS         │
-│ • Resume PDF    │    │ • Hugging Face  │    │ • Pinecone      │
-│ • Website HTML  │    │ • Local Models  │    │ • OpenSearch    │
-│ • Generic Files │    │                 │    │ • pgvector      │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
-         ▼                       ▼                       ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    RAG Pipeline                                │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐            │
-│  │  Retriever  │─▶│  Reranker   │─▶│  Response   │            │
-│  │             │  │             │  │  Pipeline   │            │
-│  └─────────────┘  └─────────────┘  └─────────────┘            │
-└─────────────────────────────────────────────────────────────────┘
-         │                       │                       │
-         ▼                       ▼                       ▼
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   LLM Backends  │    │    Agents       │    │   Persistence   │
-│ • OpenAI        │    │ • Persona       │    │ • Redis         │
-│ • Hugging Face  │    │ • Recruiter     │    │ • SQLite        │
-│ • AWS Bedrock   │    │ • Assistant     │    │ • Memory        │
-│ • vLLM          │    │ • Tools         │    │                 │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
+```text
+Source -> Ingestor -> Chunker -> Embedder -> FAISSVectorStore
+                                     |
+Query -> RouterAgent -> RetrieverAgent -> RerankerAgent -> PersonaAgent -> Response
+                                                             |
+                                                        MemoryManager
 ```
 
-### Agent Pipeline
-
-The system implements a sophisticated multi-agent pipeline:
-
-1. **Memory Manager**: Fetches user context and conversation history
-2. **Router**: Determines the appropriate response path (RAG, tools, or direct)
-3. **Retriever**: Searches for relevant documents using vector similarity
-4. **Reranker**: Reranks retrieved documents by relevance
-5. **Persona**: Generates formal responses with citations
-6. **Critic**: Validates responses for accuracy and prevents hallucinations
-7. **Notes**: Persists interaction summaries for future reference
-
-### Tool Integration
-
-The system includes built-in tools:
-
-- **Calendly Agent**: Creates scheduling links and manages availability
-- **Email Agent**: Drafts and sends professional emails
-- **Notes Agent**: Saves interaction summaries to vector database
-
-### Conditional Routing
-
-The router intelligently determines the response path:
-
-- **RAG Path**: For questions requiring document retrieval
-- **Tool Path**: For scheduling, email, or note-taking requests
-- **Direct Path**: For simple conversational responses
-
-## Advanced Usage
-
-### Custom Persona
-
-```python
-import os
-os.environ["PERSONA_PROMPT"] = "You are a specialized technical consultant. Provide detailed, technical responses with code examples when appropriate."
-```
-
-### Memory Management
-
-```python
-# The system automatically tracks user interactions
-state = MessagesState()
-state.messages = [{"role": "user", "content": "What did we discuss about Python?"}]
-state.user_id = "user123"  # Enables memory retrieval
-
-result = graph.run(state)
-```
-
-### Tool Usage
-
-```python
-# Scheduling
-state = MessagesState()
-state.messages = [{"role": "user", "content": "Schedule a meeting with me"}]
-result = graph.run(state)
-
-# Email drafting
-state = MessagesState()
-state.messages = [{"role": "user", "content": "Draft an email to a recruiter about my Python skills"}]
-result = graph.run(state)
-
-# Email sending (requires SMTP configuration)
-state = MessagesState()
-state.messages = [{"role": "user", "content": "Send email to recruiter@company.com"}]
-state.allow_send = True
-state.email_to = "recruiter@company.com"
-state.email_subject = "Job Application"
-result = graph.run(state)
-```
-
-## Database Setup
-
-### PostgreSQL with pgvector
-
-```sql
--- Enable the pgvector extension
-CREATE EXTENSION IF NOT EXISTS vector;
-
--- Create the documents table
-CREATE TABLE documents (
-    id TEXT PRIMARY KEY,
-    content TEXT,
-    metadata JSONB,
-    embedding VECTOR(1536)  -- Adjust dimension based on your embedding model
-);
-
--- Create an index for efficient vector search
-CREATE INDEX ON documents USING ivfflat (embedding vector_cosine_ops);
-```
-
-## Testing
-
-Run the test suite:
-
-```bash
-pytest tests/
-```
-
-The test suite includes:
-- Unit tests for all agents
-- Integration tests for the complete pipeline
-- Tool functionality tests
-- Error handling tests
-
-## 📚 Examples & Demos
-
-### Portfolio Demo
-
-```bash
-cd EXAMPLES/portfolio_demo
-./start_demo.sh
-```
-
-Features:
-- Personal portfolio assistant
-- Resume and GitHub integration
-- Professional Q&A with citations
-- Interactive web interface
-
-### Recruiter Demo
-
-```bash
-cd EXAMPLES/recruiter_demo
-# Coming soon in Week 4
-```
-
-Features:
-- Candidate evaluation
-- Skills matching
-- Interview scheduling
-- Recruitment workflows
-
-### Internal KB Demo
-
-```bash
-cd EXAMPLES/internal_kb_demo
-# Coming soon in Week 4
-```
-
-Features:
-- Document ingestion
-- Knowledge search
-- Team collaboration
-- Access controls
-
-## 📖 Documentation
-
-- [Quick Start Guide](docs/QUICKSTART.md) - Get up and running quickly
-- [Architecture Guide](docs/ARCHITECTURE.md) - Detailed system architecture
-- [Security Guide](docs/SECURITY.md) - Security best practices
-- [Privacy Policy](docs/PRIVACY.md) - Data protection and privacy
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Add tests for new functionality
-4. Ensure all tests pass
-5. Submit a pull request
-
-## License
-
-This project is licensed under the MIT License.
-
-## Support
-
-For issues and questions:
-- Check the documentation
-- Review the test examples
-- Open an issue on GitHub
+See [docs/QUICKSTART.md](docs/QUICKSTART.md) for a slightly more detailed walkthrough.
