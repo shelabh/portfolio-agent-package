@@ -1,6 +1,15 @@
+"""API tests for the supported FastAPI wrapper.
+
+These tests should run in the canonical Poetry dev environment. If a local
+environment is underinstalled and does not have FastAPI available, skip here
+instead of failing during collection. CI still verifies FastAPI explicitly in
+the runtime import check before running pytest.
+"""
+
+import pytest
 from unittest.mock import Mock
 
-from fastapi.testclient import TestClient
+TestClient = pytest.importorskip("fastapi.testclient", reason="FastAPI is required for API wrapper tests").TestClient
 
 from portfolio_agent import PortfolioAgent, create_app
 from portfolio_agent.vector_stores import FAISSVectorStore

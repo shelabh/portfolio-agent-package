@@ -1,8 +1,10 @@
+import pytest
 from unittest.mock import Mock
 
 from portfolio_agent import PortfolioAgent
-from portfolio_agent.api.server import create_app
 from portfolio_agent.vector_stores import FAISSVectorStore
+
+pytest.importorskip("faiss", reason="FAISS is required for SDK vector store tests")
 
 
 class FakeEmbedder:
@@ -49,6 +51,9 @@ def test_sdk_add_text_multiple_times_keeps_retrieval_stable(tmp_path):
 
 
 def test_create_app_uses_supplied_agent(tmp_path):
+    pytest.importorskip("fastapi", reason="FastAPI is required for API wrapper tests")
+    from portfolio_agent.api.server import create_app
+
     vector_store = FAISSVectorStore(index_path=str(tmp_path / "app_index"), dimension=3)
     agent = PortfolioAgent(embedder=FakeEmbedder(), vector_store=vector_store)
     app = create_app(agent=agent)

@@ -48,7 +48,9 @@ class TestOpenAIEmbedder:
 class TestHuggingFaceEmbedder:
     @pytest.fixture
     def mock_sentence_transformers(self):
-        with patch("portfolio_agent.embeddings.hf_embedder.SentenceTransformer") as model_cls:
+        with patch("portfolio_agent.embeddings.hf_embedder.SENTENCE_TRANSFORMERS_AVAILABLE", True), patch(
+            "portfolio_agent.embeddings.hf_embedder.SentenceTransformer"
+        ) as model_cls:
             model = Mock()
             model.encode.return_value = np.array(
                 [
@@ -67,6 +69,7 @@ class TestHuggingFaceEmbedder:
 
 class TestFAISSVectorStore:
     def test_search_by_text_uses_sync_embedder(self):
+        pytest.importorskip("faiss", reason="FAISS is required for vector store tests")
         with tempfile.TemporaryDirectory() as temp_dir:
             store = FAISSVectorStore(index_path=f"{temp_dir}/index", dimension=3)
             docs = [
