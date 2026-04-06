@@ -75,6 +75,19 @@ class TestLLMFunctions:
             with pytest.raises(RuntimeError):
                 call_vllm_chat(messages)
 
+    def test_call_openai_chat_without_api_key_raises_runtime_error(self):
+        """Test OpenAI chat fails explicitly when no API key or client is configured."""
+        messages = [{"role": "user", "content": "Hello"}]
+
+        with patch('portfolio_agent.utils.client', None), \
+             patch('portfolio_agent.utils.settings') as mock_settings:
+
+            mock_settings.OPENAI_API_KEY = None
+            mock_settings.DEFAULT_MODEL = "gpt-4o-mini"
+
+            with pytest.raises(RuntimeError, match="OPENAI_API_KEY"):
+                call_openai_chat(messages)
+
     def test_llm_chat_openai_provider(self):
         """Test llm_chat with OpenAI provider."""
         messages = [{"role": "user", "content": "Hello"}]

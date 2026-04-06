@@ -35,7 +35,7 @@ jobs:
         run: poetry install --no-interaction --with dev
 
       - name: Verify runtime imports
-        run: poetry run python -c "import fastapi, portfolio_agent; print(portfolio_agent.__version__)"
+        run: poetry run python -c "import fastapi, portfolio_agent, portfolio_agent.utils; print(portfolio_agent.__version__)"
 
       - name: Run smoke benchmark
         run: poetry run python scripts/run_evaluation.py --mode smoke --fail-on-regression --output benchmark-smoke.json
