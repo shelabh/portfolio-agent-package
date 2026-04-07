@@ -81,6 +81,7 @@ def llm_chat(messages: List[Dict[str, str]], **kwargs) -> str:
 # Simple pgvector helper (SQLAlchemy)
 # Only create engine if DATABASE_URL is provided and dependencies are available
 engine = None
+text = None
 try:
     from sqlalchemy import create_engine, text
     from sqlalchemy.engine import Engine
@@ -90,6 +91,13 @@ try:
 except ImportError:
     # SQLAlchemy or database drivers not available
     engine = None
+
+
+def _sql_text(query: str):
+    """Return a SQLAlchemy text clause when available, otherwise pass through raw SQL."""
+    if text is None:
+        return query
+    return text(query)
 
 def upsert_vector(id: str, metadata: Dict[str, Any], vector: List[float], retries=3):
     """
@@ -103,7 +111,7 @@ def upsert_vector(id: str, metadata: Dict[str, Any], vector: List[float], retrie
         try:
             with engine.begin() as conn:
                 conn.execute(
-                    text(
+                    _sql_text(
                         f"""
                         INSERT INTO {settings.VECTOR_TABLE} (id, content, metadata, embedding)
                         VALUES (:id, :content, :metadata::jsonb, :embedding)
@@ -130,7 +138,7 @@ def nearest_neighbors(query_vector: List[float], top_k: int = 4, retries=3):
     for attempt in range(retries):
         try:
             with engine.connect() as conn:
-                sql = text(
+                sql = _sql_text(
                     f"""
                     SELECT id, content, metadata, embedding <#> :q AS distance
                     FROM {settings.VECTOR_TABLE}

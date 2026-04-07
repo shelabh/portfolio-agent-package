@@ -11,7 +11,7 @@ The repository is intentionally standardized around one supported path:
 
 - Python SDK via `PortfolioAgent`
 - Local FAISS indexing
-- File ingestion for text/markdown/html/json/docx/pdf
+- File ingestion for text/markdown/html/json/pdf
 - GitHub and website ingestion through the SDK
 - Querying with citations and lightweight session memory
 - Optional FastAPI wrapper via `create_app(...)`
