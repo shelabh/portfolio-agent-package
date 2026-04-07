@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section bg-gradient-primary text-white py-5">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h1 class="display-4 fw-bold mb-4">
+                    Meet Your AI Portfolio Assistant
+                </h1>
+                <p class="lead mb-4">
+                    A production-ready RAG pipeline that understands your portfolio, 
+                    answers questions about your skills, and helps showcase your expertise.
+                </p>
+                <div class="d-flex gap-3">
+                    <a href="/chat" class="btn btn-light btn-lg">
+                        <i class="fas fa-comments me-2"></i>
+                        Start Chatting
+                    </a>
+                    <a href="/demo" class="btn btn-outline-light btn-lg">
+                        <i class="fas fa-play me-2"></i>
+                        View Demo
+                    </a>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="hero-image text-center">
+                    <i class="fas fa-robot display-1 opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="py-5">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 mx-auto text-center mb-5">
+                <h2 class="display-5 fw-bold mb-3">Powerful Features</h2>
+                <p class="lead text-muted">
+                    Built with enterprise-grade security and advanced AI capabilities
+                </p>
+            </div>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="feature-card h-100 p-4 border rounded-3 shadow-sm">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-brain text-primary fs-1"></i>
+                    </div>
+                    <h4>Multi-Agent Architecture</h4>
+                    <p class="text-muted">
+                        Sophisticated pipeline with specialized agents for routing, 
+                        retrieval, reranking, and response generation.
+                    </p>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="feature-card h-100 p-4 border rounded-3 shadow-sm">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-shield-alt text-success fs-1"></i>
+                    </div>
+                    <h4>Security First</h4>
+                    <p class="text-muted">
+                        Built-in PII detection, data encryption, and compliance 
+                        features for enterprise use.
+                    </p>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="feature-card h-100 p-4 border rounded-3 shadow-sm">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-search text-info fs-1"></i>
+                    </div>
+                    <h4>Advanced RAG</h4>
+                    <p class="text-muted">
+                        Multi-stage retrieval, reranking, and citation tracking 
+                        for accurate responses.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Demo Section -->
+<section class="bg-light py-5">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h2 class="display-5 fw-bold mb-4">Try It Now</h2>
+                <p class="lead mb-4">
+                    Ask questions about the portfolio, skills, experience, or projects. 
+                    The AI will provide accurate, cited responses.
+                </p>
+                
+                <div class="demo-examples">
+                    <h5 class="mb-3">Example Questions:</h5>
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="fas fa-arrow-right text-primary me-2"></i>
+                            "What programming languages does John know?"
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-arrow-right text-primary me-2"></i>
+                            "Tell me about his experience at Tech Corp"
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-arrow-right text-primary me-2"></i>
+                            "What projects has he worked on?"
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-arrow-right text-primary me-2"></i>
+                            "What certifications does he have?"
+                        </li>
+                    </ul>
+                </div>
+                
+                <a href="/chat" class="btn btn-primary btn-lg">
+                    <i class="fas fa-comments me-2"></i>
+                    Start Chatting
+                </a>
+            </div>
+            
+            <div class="col-lg-6">
+                <div class="demo-preview bg-white p-4 rounded-3 shadow">
+                    <div class="chat-preview">
+                        <div class="message user-message mb-3">
+                            <div class="message-content bg-primary text-white p-3 rounded">
+                                What are John's main skills?
+                            </div>
+                        </div>
+                        
+                        <div class="message bot-message mb-3">
+                            <div class="message-content bg-light p-3 rounded">
+                                <p class="mb-2">Based on John's portfolio, his main skills include:</p>
+                                <ul class="mb-2">
+                                    <li><strong>Programming Languages:</strong> Python, JavaScript, TypeScript, Java, Go</li>
+                                    <li><strong>Frameworks:</strong> Django, FastAPI, React, Vue.js, Node.js</li>
+                                    <li><strong>Cloud Platforms:</strong> AWS, Google Cloud, Azure</li>
+                                </ul>
+                                <small class="text-muted">
+                                    <i class="fas fa-quote-left me-1"></i>
+                                    Source: portfolio.md
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Stats Section -->
+<section class="py-5">
+    <div class="container">
+        <div class="row text-center">
+            <div class="col-md-3">
+                <div class="stat-item">
+                    <h3 class="display-4 fw-bold text-primary">100%</h3>
+                    <p class="text-muted">Secure & Private</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-item">
+                    <h3 class="display-4 fw-bold text-success">5+</h3>
+                    <p class="text-muted">Agent Types</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-item">
+                    <h3 class="display-4 fw-bold text-info">10+</h3>
+                    <p class="text-muted">Document Formats</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-item">
+                    <h3 class="display-4 fw-bold text-warning">24/7</h3>
+                    <p class="text-muted">Available</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="bg-primary text-white py-5">
+    <div class="container text-center">
+        <h2 class="display-5 fw-bold mb-3">Ready to Get Started?</h2>
+        <p class="lead mb-4">
+            Experience the power of AI-driven portfolio management
+        </p>
+        <div class="d-flex justify-content-center gap-3">
+            <a href="/chat" class="btn btn-light btn-lg">
+                <i class="fas fa-comments me-2"></i>
+                Try the Chat
+            </a>
+            <a href="/api" class="btn btn-outline-light btn-lg" target="_blank">
+                <i class="fas fa-code me-2"></i>
+                View API Docs
+            </a>
+        </div>
+    </div>
+</section>
+{% endblock %}

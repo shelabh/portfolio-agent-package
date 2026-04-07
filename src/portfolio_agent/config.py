@@ -10,7 +10,7 @@ import yaml
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 from pydantic_settings import BaseSettings
-from pydantic import Field, validator
+from pydantic import Field, field_validator, ConfigDict
 
 
 class Settings(BaseSettings):
@@ -34,12 +34,18 @@ class Settings(BaseSettings):
     DEFAULT_MODEL: str = Field(default="gpt-4o-mini", description="Default LLM model")
     
     # ===== EMBEDDINGS =====
-    EMBEDDING_PROVIDER: str = Field(default="openai", description="Embedding provider: openai, hf, local")
-    EMBEDDING_MODEL: str = Field(default="text-embedding-3-small", description="Embedding model")
-    EMBEDDING_DIMENSION: int = Field(default=1536, description="Embedding dimension")
+    EMBEDDING_PROVIDER: str = Field(default="hf", description="Embedding provider: openai or hf")
+    EMBEDDING_MODEL: str = Field(default="sentence-transformers/all-MiniLM-L6-v2", description="Embedding model")
+    EMBEDDING_DIMENSION: int = Field(default=384, description="Embedding dimension")
+    EMBEDDING_DEVICE: Optional[str] = Field(default=None, description="Embedding runtime device: cpu, cuda, mps, or auto")
+    EMBEDDING_BATCH_SIZE: int = Field(default=16, description="Batch size for embedding generation")
+    HF_USE_SENTENCE_TRANSFORMERS: bool = Field(default=True, description="Use sentence-transformers for local HF embeddings")
     
     # ===== VECTOR STORES =====
     VECTOR_STORE: str = Field(default="faiss", description="Vector store: faiss, pinecone, opensearch, pgvector")
+    FAISS_INDEX_PATH: str = Field(default="./faiss_index", description="Path to FAISS index files")
+    FAISS_INDEX_TYPE: str = Field(default="flat", description="FAISS index type: flat, ivf, hnsw")
+    FAISS_METRIC: str = Field(default="cosine", description="FAISS distance metric: cosine, l2, ip")
     PINECONE_API_KEY: Optional[str] = Field(default=None, description="Pinecone API key")
     PINECONE_ENVIRONMENT: Optional[str] = Field(default=None, description="Pinecone environment")
     OPENSEARCH_URL: Optional[str] = Field(default=None, description="OpenSearch cluster URL")
@@ -49,6 +55,12 @@ class Settings(BaseSettings):
     # ===== DATABASE =====
     DATABASE_URL: Optional[str] = Field(default=None, description="Database connection URL")
     VECTOR_TABLE: str = Field(default="documents", description="Vector storage table name")
+    
+    # ===== API & SERVER =====
+    API_HOST: str = Field(default="0.0.0.0", description="API server host")
+    API_PORT: int = Field(default=8000, description="API server port")
+    ALLOWED_ORIGINS: List[str] = Field(default=["*"], description="Allowed CORS origins")
+    ALLOWED_HOSTS: List[str] = Field(default=["*"], description="Allowed hosts")
     
     # ===== INGESTION =====
     CHUNK_SIZE: int = Field(default=1000, description="Text chunk size for processing")
@@ -102,22 +114,33 @@ class Settings(BaseSettings):
     ENABLE_AUDIT_LOG: bool = Field(default=True, description="Enable audit logging")
     METRICS_ENABLED: bool = Field(default=False, description="Enable metrics collection")
     
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = True
-        extra = "ignore"
+    model_config = ConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+        extra="ignore"
+    )
     
-    @validator('LOCAL_ONLY', pre=True)
+    @field_validator('LOCAL_ONLY', mode='before')
+    @classmethod
     def validate_local_only(cls, v):
         """Ensure LOCAL_ONLY is properly set based on environment."""
         if isinstance(v, str):
             return v.lower() in ('true', '1', 'yes', 'on')
         return bool(v)
     
-    @validator('REDACT_PII', pre=True)
+    @field_validator('REDACT_PII', mode='before')
+    @classmethod
     def validate_redact_pii(cls, v):
         """Ensure REDACT_PII is properly set."""
+        if isinstance(v, str):
+            return v.lower() in ('true', '1', 'yes', 'on')
+        return bool(v)
+
+    @field_validator('HF_USE_SENTENCE_TRANSFORMERS', mode='before')
+    @classmethod
+    def validate_hf_use_sentence_transformers(cls, v):
+        """Ensure HF_USE_SENTENCE_TRANSFORMERS is properly set."""
         if isinstance(v, str):
             return v.lower() in ('true', '1', 'yes', 'on')
         return bool(v)

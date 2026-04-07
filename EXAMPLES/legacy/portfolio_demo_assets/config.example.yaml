@@ -1,0 +1,177 @@
+# Portfolio Agent Demo Configuration
+# Copy this file to config.yaml and customize for your setup
+
+# Server Configuration
+server:
+  host: "0.0.0.0"
+  port: 8000
+  debug: false
+  reload: false
+
+# API Configuration
+api:
+  base_url: "http://localhost:8000"
+  timeout: 30
+  retry_attempts: 3
+
+# Demo Configuration
+demo:
+  title: "Portfolio Agent Demo"
+  description: "AI-powered portfolio assistant showcasing RAG capabilities"
+  version: "1.0.0"
+  
+  # Demo modes
+  modes:
+    portfolio:
+      enabled: true
+      title: "Portfolio Agent"
+      description: "Personal portfolio assistant"
+    recruiter:
+      enabled: true
+      title: "Recruiter Assistant"
+      description: "Candidate evaluation tool"
+    knowledge:
+      enabled: true
+      title: "Knowledge Base"
+      description: "Team collaboration platform"
+
+# RAG Pipeline Configuration
+rag:
+  # LLM Configuration
+  llm:
+    provider: "openai"  # openai, huggingface, bedrock, vllm
+    model: "gpt-3.5-turbo"
+    temperature: 0.7
+    max_tokens: 1000
+    api_key: "${OPENAI_API_KEY}"
+  
+  # Embedding Configuration
+  embeddings:
+    provider: "openai"  # openai, huggingface, local
+    model: "text-embedding-3-small"
+    api_key: "${OPENAI_API_KEY}"
+  
+  # Vector Store Configuration
+  vector_store:
+    provider: "faiss"  # faiss, pinecone, opensearch, pgvector
+    index_path: "./data/faiss_index"
+    dimension: 1536  # OpenAI embedding dimension
+  
+  # Retrieval Configuration
+  retrieval:
+    top_k: 5
+    similarity_threshold: 0.7
+    rerank: true
+    rerank_model: "cross-encoder/ms-marco-MiniLM-L-6-v2"
+
+# Security Configuration
+security:
+  enable_pii_redaction: true
+  enable_rate_limiting: true
+  rate_limit_requests: 100
+  rate_limit_window: 3600  # seconds
+  
+  # API Keys (use environment variables in production)
+  api_keys:
+    openai: "${OPENAI_API_KEY}"
+    huggingface: "${HUGGINGFACE_API_KEY}"
+    pinecone: "${PINECONE_API_KEY}"
+
+# Data Configuration
+data:
+  # Input data sources
+  sources:
+    resume_path: "./data/resume.pdf"
+    github_repos:
+      - "https://github.com/yourusername/yourrepo"
+    websites:
+      - "https://yourwebsite.com"
+    documents:
+      - "./data/projects/"
+  
+  # Processing options
+  chunk_size: 1000
+  chunk_overlap: 200
+  enable_pii_redaction: true
+  
+  # Output paths
+  output_dir: "./data/processed"
+  vector_index_path: "./data/faiss_index"
+
+# Logging Configuration
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "./logs/demo.log"
+  max_size: "10MB"
+  backup_count: 5
+
+# Monitoring Configuration
+monitoring:
+  enable_metrics: true
+  metrics_port: 9090
+  enable_health_checks: true
+  health_check_interval: 30
+
+# UI Configuration
+ui:
+  theme: "light"  # light, dark, auto
+  language: "en"
+  show_sources: true
+  show_confidence_scores: true
+  max_message_history: 50
+  
+  # Chat configuration
+  chat:
+    welcome_message: "👋 Welcome to the Portfolio Agent Demo! I'm your AI assistant, trained on your portfolio data."
+    placeholder: "Ask me about your skills, experience, or projects..."
+    max_input_length: 1000
+    
+    # Example questions
+    example_questions:
+      - "What are your main technical skills?"
+      - "Tell me about your recent projects"
+      - "What programming languages do you know?"
+      - "Describe your work experience"
+      - "How can I contact you?"
+
+# Development Configuration
+development:
+  enable_debug_mode: false
+  enable_hot_reload: false
+  mock_llm_responses: false
+  skip_authentication: false
+  
+  # Test data
+  test_data:
+    sample_queries:
+      - "What is your experience with Python?"
+      - "Tell me about your machine learning projects"
+      - "What are your strongest skills?"
+    
+    sample_responses:
+      - "I have extensive experience with Python, including web development, data analysis, and machine learning."
+      - "I've worked on several ML projects including recommendation systems and NLP applications."
+      - "My strongest skills include Python, JavaScript, machine learning, and cloud technologies."
+
+# Environment-specific overrides
+environments:
+  development:
+    server:
+      debug: true
+      reload: true
+    logging:
+      level: "DEBUG"
+    development:
+      enable_debug_mode: true
+  
+  production:
+    server:
+      debug: false
+      reload: false
+    logging:
+      level: "WARNING"
+    security:
+      enable_rate_limiting: true
+    development:
+      enable_debug_mode: false

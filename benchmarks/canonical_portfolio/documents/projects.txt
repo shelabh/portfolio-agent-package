@@ -1,0 +1,2 @@
+One featured project is portfolio-agent, a persona-grounded RAG toolkit built with LangGraph and FAISS.
+Jane wrote the ingestion pipeline, evaluation harness, and source-aware response flow for the project.

@@ -48,7 +48,8 @@ class GenericIngestor:
             max_file_size_mb: Maximum file size in MB
         """
         self.supported_formats = supported_formats or [
-            ".txt", ".md", ".html", ".json", ".xml", ".csv", ".docx"
+            ".txt", ".md", ".html", ".json", ".xml", ".csv",
+            *(['.docx'] if DOCX_AVAILABLE else [])
         ]
         self.max_file_size_mb = max_file_size_mb
     

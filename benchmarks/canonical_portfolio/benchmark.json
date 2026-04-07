@@ -1,0 +1,73 @@
+{
+  "name": "canonical_portfolio",
+  "description": "Small benchmark for the supported PortfolioAgent SDK path.",
+  "documents": [
+    {
+      "source": "profile.txt",
+      "path": "documents/profile.txt"
+    },
+    {
+      "source": "projects.txt",
+      "path": "documents/projects.txt"
+    },
+    {
+      "source": "experience.txt",
+      "path": "documents/experience.txt"
+    },
+    {
+      "source": "collaboration.txt",
+      "path": "documents/collaboration.txt"
+    },
+    {
+      "source": "highlights.md",
+      "path": "documents/highlights.md",
+      "document_type": "md",
+      "ingest_via": "file"
+    }
+  ],
+  "cases": [
+    {
+      "id": "backend_retrieval",
+      "query": "What backend and retrieval work does Jane do?",
+      "expected_sources": ["profile.txt"],
+      "required_term_groups": [["python", "fastapi", "retrieval"]]
+    },
+    {
+      "id": "project_stack",
+      "query": "What is portfolio-agent and what stack is it built with?",
+      "expected_sources": ["projects.txt"],
+      "required_term_groups": [["portfolio-agent"], ["langgraph", "faiss"]]
+    },
+    {
+      "id": "leadership_experience",
+      "query": "What leadership or mentoring experience is described?",
+      "expected_sources": ["experience.txt"],
+      "required_term_groups": [["led", "mentored", "platform api"]]
+    },
+    {
+      "id": "founder_collaboration",
+      "query": "How does Jane help founders turn prototypes into usable products?",
+      "expected_sources": ["collaboration.txt"],
+      "required_term_groups": [["founders", "prototypes"], ["product demos", "onboarding", "developer experience"]]
+    },
+    {
+      "id": "synthesis_backend_toolkit",
+      "query": "How does Jane connect backend engineering with her portfolio-agent toolkit work?",
+      "expected_sources": ["profile.txt", "projects.txt"],
+      "required_term_groups": [["python", "fastapi", "retrieval"], ["portfolio-agent", "langgraph", "faiss"]]
+    },
+    {
+      "id": "unsupported_education",
+      "query": "What university did Jane attend?",
+      "expected_sources": [],
+      "required_term_groups": [],
+      "expect_abstention": true
+    },
+    {
+      "id": "markdown_release_work",
+      "query": "What release-readiness work is highlighted in the markdown notes?",
+      "expected_sources": ["highlights.md"],
+      "required_term_groups": [["release checklists"], ["benchmark documentation"]]
+    }
+  ]
+}

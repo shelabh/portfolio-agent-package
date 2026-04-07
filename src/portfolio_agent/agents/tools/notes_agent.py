@@ -11,8 +11,8 @@ def notes_agent(state: MessagesState) -> Command[Literal["end"]]:
     Persist a short summary of the interaction to your notes store (Postgres+pgvector).
     Saves the final_answer and metadata (user_id, timestamp).
     """
-    final = state.__dict__.get("final_answer") or state.__dict__.get("candidate_answer", "")
-    user_id = getattr(state, "user_id", "anon")
+    final = getattr(state, "final_answer", None) or getattr(state, "candidate_answer", "")
+    user_id = getattr(state, "user_id", None) or "anon"
     note_id = f"note-{uuid.uuid4().hex}"
     metadata = {"user_id": user_id, "source": "interaction", "content": final}
     # For memory we embed the note content and upsert into vector table (simplified)

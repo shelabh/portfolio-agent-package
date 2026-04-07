@@ -1,0 +1,2 @@
+Jane Doe is a backend engineer focused on Python, FastAPI, and retrieval systems.
+She builds SDKs and internal developer tooling for search, question answering, and API workflows.

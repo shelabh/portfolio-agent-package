@@ -1,27 +1,44 @@
 # portfolio_agent/utils.py
-import os
 import json
-import requests
-import time
 import logging
+import time
 from typing import List, Dict, Any, Optional
-from .config import settings
+
+import requests
 from openai import OpenAI
+
+from .config import settings
 
 logger = logging.getLogger(__name__)
 
-# Initialize OpenAI client
-client = OpenAI(api_key=settings.OPENAI_API_KEY)
+# Lazily initialize the OpenAI client so importing this module does not require
+# OPENAI_API_KEY during test collection or local-only workflows.
+client = None
+
+
+def _get_openai_client():
+    """Return a cached OpenAI client or create one when configuration is present."""
+    global client
+
+    if client is not None:
+        return client
+
+    if not settings.OPENAI_API_KEY:
+        raise RuntimeError("OPENAI_API_KEY is required to call the OpenAI chat backend.")
+
+    client = OpenAI(api_key=settings.OPENAI_API_KEY)
+    return client
 
 def call_openai_chat(messages: List[Dict[str, str]], model: Optional[str] = None, max_tokens=512, retries=3) -> str:
     """
     Call OpenAI chat completion with retry logic and error handling.
     """
     model = model or settings.DEFAULT_MODEL
+    active_client = _get_openai_client()
     
     for attempt in range(retries):
         try:
-            response = client.chat.completions.create(
+            response = active_client.chat.completions.create(
                 model=model,
                 messages=messages,
                 max_tokens=max_tokens,
@@ -64,6 +81,7 @@ def llm_chat(messages: List[Dict[str, str]], **kwargs) -> str:
 # Simple pgvector helper (SQLAlchemy)
 # Only create engine if DATABASE_URL is provided and dependencies are available
 engine = None
+text = None
 try:
     from sqlalchemy import create_engine, text
     from sqlalchemy.engine import Engine
@@ -73,6 +91,13 @@ try:
 except ImportError:
     # SQLAlchemy or database drivers not available
     engine = None
+
+
+def _sql_text(query: str):
+    """Return a SQLAlchemy text clause when available, otherwise pass through raw SQL."""
+    if text is None:
+        return query
+    return text(query)
 
 def upsert_vector(id: str, metadata: Dict[str, Any], vector: List[float], retries=3):
     """
@@ -86,7 +111,7 @@ def upsert_vector(id: str, metadata: Dict[str, Any], vector: List[float], retrie
         try:
             with engine.begin() as conn:
                 conn.execute(
-                    text(
+                    _sql_text(
                         f"""
                         INSERT INTO {settings.VECTOR_TABLE} (id, content, metadata, embedding)
                         VALUES (:id, :content, :metadata::jsonb, :embedding)
@@ -113,7 +138,7 @@ def nearest_neighbors(query_vector: List[float], top_k: int = 4, retries=3):
     for attempt in range(retries):
         try:
             with engine.connect() as conn:
-                sql = text(
+                sql = _sql_text(
                     f"""
                     SELECT id, content, metadata, embedding <#> :q AS distance
                     FROM {settings.VECTOR_TABLE}

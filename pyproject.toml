@@ -1,19 +1,23 @@
 [tool.poetry]
 name = "portfolio-agent"
-version = "0.3.0"
-description = "A production-ready RAG pipeline with multi-agent architecture, memory management, and tool integration"
+version = "0.3.0rc1"
+description = "An open-source Python toolkit for turning documents, repositories, and web content into a citable, persona-aware assistant"
 authors = ["Shelabh Tyagi <shelabh.tyagi@example.com>"]
 readme = "README.md"
 license = "Apache-2.0"
-homepage = "https://github.com/shelabhtyagi/portfolio-agent"
-repository = "https://github.com/shelabhtyagi/portfolio-agent"
-documentation = "https://github.com/shelabhtyagi/portfolio-agent/blob/main/docs/README.md"
-keywords = ["rag", "langgraph", "ai", "agent", "portfolio", "assistant", "vector-search", "embeddings", "fine-tuning"]
+homepage = "https://github.com/shelabh/portfolio-agent-package"
+repository = "https://github.com/shelabh/portfolio-agent-package"
+documentation = "https://github.com/shelabh/portfolio-agent-package/blob/main/docs/README.md"
+keywords = ["rag", "langgraph", "portfolio", "assistant", "vector-search", "embeddings", "sdk", "faiss", "retrieval"]
+packages = [{ include = "portfolio_agent", from = "src" }]
+include = ["CHANGELOG.md"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
@@ -24,106 +28,65 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = ">=3.12,<3.14"
-# Core dependencies (always required)
+# Core runtime
 langgraph = "^0.6.6"
-redis = ">=6.0.0,<7.0.0"
-msgpack = "^1.0.5"
 pydantic-settings = "^2.0.0"
 requests = "^2.31.0"
-sqlalchemy = "^2.0.0"
 pyyaml = "^6.0.0"
 fastapi = "^0.104.0"
 uvicorn = "^0.24.0"
-
-# LLM and Vector dependencies (required for your current use case)
 openai = "^1.0.0"
-langchain = "^0.3.0"
-pgvector = "^0.4.0"
-psycopg = { version = "^3.1.0", extras = ["binary"] }
-psycopg2-binary = "^2.9.7"  # For compatibility with libraries expecting psycopg2
 
-[tool.poetry.extras]
-# LLM backends
-llm = [
-    "openai>=1.0.0",
-    "transformers>=4.30.0",
-    "torch>=2.0.0",
-    "accelerate>=0.20.0",
-    "boto3>=1.26.0",  # For AWS Bedrock
-]
-
-# Vector stores
-vector = [
-    "faiss-cpu>=1.7.4",
-    "pinecone-client>=2.2.0",
-    "opensearch-py>=2.0.0",
-    "pgvector>=0.4.0",
-]
+# Canonical vector runtime
+faiss-cpu = "^1.7.4"
 
 # Embeddings
-embeddings = [
-    "sentence-transformers>=2.2.0",
-    "transformers>=4.30.0",
-    "torch>=2.0.0",
-]
-
-# Fine-tuning
-finetune = [
-    "peft>=0.5.0",
-    "transformers>=4.30.0",
-    "torch>=2.0.0",
-    "datasets>=2.14.0",
-    "accelerate>=0.20.0",
-    "bitsandbytes>=0.41.0",
-]
+sentence-transformers = "^2.2.2"
+transformers = "^4.30.0"
+torch = "^2.0.0"
+accelerate = "^0.20.0"
 
 # Document processing
-documents = [
-    "pypdf>=3.0.0",
-    "pymupdf>=1.23.0",
-    "beautifulsoup4>=4.12.0",
-    "lxml>=4.9.0",
-    "python-docx>=0.8.11",
-    "markdown>=3.4.0",
-]
+pypdf = "^3.17.0"
+beautifulsoup4 = "^4.12.0"
+markdown = "^3.5.0"
 
-# PostgreSQL support
-postgres = [
-    "pgvector>=0.4.0",
-    "psycopg[binary]>=3.1.0",
-    "psycopg2-binary>=2.9.7",
-]
-
-# All optional dependencies
-all = [
-    "portfolio-agent[llm,vector,embeddings,finetune,documents,postgres]"
-]
+# Utilities
+numpy = "^1.24.0"
+python-multipart = "^0.0.6"
+python-dotenv = "^1.0.0"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^8.4.2"
-pytest-asyncio = "^0.23.0"
+pytest = "^7.4.0"
+pytest-asyncio = "^0.21.0"
+pytest-benchmark = "^4.0.0"
+pytest-xdist = "^3.3.0"
+pytest-cov = "^4.1.0"
+pytest-timeout = "^2.1.0"
+httpx = ">=0.27,<0.28"
 black = "^23.0.0"
 isort = "^5.12.0"
 flake8 = "^6.0.0"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+mypy = "^1.5.0"
+bandit = "^1.7.0"
+safety = "^2.3.0"
 
 [tool.poetry.scripts]
 portfolio-agent = "portfolio_agent.cli:main"
 
 [tool.pytest.ini_options]
+markers = [
+    "benchmark: marks tests as benchmark tests",
+    "slow: marks tests as slow running",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+    "security: marks tests as security tests"
+]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "-v --tb=short"
 
-[tool.black]
-line-length = 88
-target-version = ['py312']
-
-[tool.isort]
-profile = "black"
-line_length = 88
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -5,7 +5,6 @@ from typing import Literal
 import requests
 import os
 
-CALENDLY_API_KEY = os.getenv("CALENDLY_API_KEY")
 CALENDLY_BASE = "https://api.calendly.com"
 
 def calendly_agent(state: MessagesState) -> Command[Literal["end"]]:
@@ -15,10 +14,11 @@ def calendly_agent(state: MessagesState) -> Command[Literal["end"]]:
     """
     # For security: do NOT auto-send invites. Only generate links or availability.
     # Example implementation: return a dummy link or call Calendly API if configured.
-    if not CALENDLY_API_KEY:
+    api_key = os.getenv("CALENDLY_API_KEY")
+    if not api_key:
         return Command(goto="end", update={"calendly_link": "https://calendly.com/your-profile (not configured)"})
     # Implement a real call: find user's scheduling link or create one via API
-    headers = {"Authorization": f"Bearer {CALENDLY_API_KEY}", "Content-Type": "application/json"}
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     # Example: fetch scheduled_event_types for the user
     resp = requests.get(f"{CALENDLY_BASE}/scheduled_event_types", headers=headers, timeout=10)
     if resp.status_code != 200:

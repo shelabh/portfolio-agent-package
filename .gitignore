@@ -8,8 +8,8 @@ __pycache__/
 .venv/
 venv/
 
-# Lock files (optional but commonly regenerated)
-poetry.lock
+# # Lock files (optional but commonly regenerated)
+# poetry.lock
 
 # IDEs and system files
 .vscode/
@@ -19,3 +19,21 @@ poetry.lock
 
 # Local environment variable files
 .env
+
+# Local package/build artifacts
+dist/
+build/
+*.egg-info/
+
+# Local vector indexes created by manual runs
+*.faiss
+*.pkl
+
+# Scratch files
+test.py
+
+# Local benchmark reports
+benchmark-*.json
+release-benchmark-*.json
+settings-benchmark.json
+release-artifact-verification.json

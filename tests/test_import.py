@@ -1,7 +1,14 @@
-# tests/test_imports.py
 import pytest
 
-def test_imports():
-    from portfolio_agent import build_graph, RedisCheckpointer  # noqa: F401
-    assert callable(build_graph)
-    assert build_graph.__name__ == "build_graph"
+from portfolio_agent import PortfolioAgent
+
+
+def test_portfolio_agent_import():
+    assert PortfolioAgent is not None
+
+
+def test_create_app_import_when_fastapi_available():
+    pytest.importorskip("fastapi", reason="FastAPI is required for the API wrapper export")
+    from portfolio_agent import create_app
+
+    assert create_app is not None

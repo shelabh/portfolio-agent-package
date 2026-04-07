@@ -7,12 +7,6 @@ import os
 import smtplib
 from email.message import EmailMessage
 
-EMAIL_FROM = os.getenv("EMAIL_FROM")
-SMTP_HOST = os.getenv("SMTP_HOST")
-SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USER = os.getenv("SMTP_USER")
-SMTP_PASS = os.getenv("SMTP_PASS")
-
 def email_agent(state: MessagesState) -> Command[Literal["end"]]:
     """
     Draft an email using the model and optionally send it (if SMTP configured & allow_send flag).
@@ -25,20 +19,25 @@ def email_agent(state: MessagesState) -> Command[Literal["end"]]:
     ]
     draft = llm_chat(prompt, max_tokens=400)
     allow_send = getattr(state, "allow_send", False)
-    if allow_send and SMTP_HOST and SMTP_USER and SMTP_PASS and EMAIL_FROM:
+    email_from = os.getenv("EMAIL_FROM")
+    smtp_host = os.getenv("SMTP_HOST")
+    smtp_port = int(os.getenv("SMTP_PORT", "587"))
+    smtp_user = os.getenv("SMTP_USER")
+    smtp_pass = os.getenv("SMTP_PASS")
+    if allow_send and smtp_host and smtp_user and smtp_pass and email_from:
         # naive send: extract to/from subject from state or message. For prod, require explicit fields.
         # This is a demo: do not send unless fields exist in state
         to_address = getattr(state, "email_to", None)
         subject = getattr(state, "email_subject", "Message from portfolio assistant")
         if to_address:
             msg = EmailMessage()
-            msg["From"] = EMAIL_FROM
+            msg["From"] = email_from
             msg["To"] = to_address
             msg["Subject"] = subject
             msg.set_content(draft)
-            with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=30) as s:
+            with smtplib.SMTP(smtp_host, smtp_port, timeout=30) as s:
                 s.starttls()
-                s.login(SMTP_USER, SMTP_PASS)
+                s.login(smtp_user, smtp_pass)
                 s.send_message(msg)
             return Command(goto="end", update={"email_sent": True, "draft": draft})
     return Command(goto="end", update={"email_sent": False, "draft": draft})

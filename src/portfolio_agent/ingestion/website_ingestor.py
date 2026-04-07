@@ -4,6 +4,8 @@ Website ingestor for portfolio-agent.
 This module provides functionality to ingest content from websites.
 """
 
+from __future__ import annotations
+
 import re
 import requests
 from urllib.parse import urljoin, urlparse, urlunparse
@@ -22,6 +24,7 @@ try:
     from bs4 import BeautifulSoup
     BS4_AVAILABLE = True
 except ImportError:
+    BeautifulSoup = None
     BS4_AVAILABLE = False
 
 
